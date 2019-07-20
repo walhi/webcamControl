@@ -9,6 +9,8 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using DirectShowLib;
 using System.Diagnostics;
+using System.Collections.Generic;
+using System.Management; // need to add System.Management to your project references.
 
 namespace webcamControl
 {
@@ -18,128 +20,226 @@ namespace webcamControl
         private IAMCameraControl pCameraControl;
         private IAMVideoProcAmp pVideoProcAmp;
         private int verticalCorrect = 0;
-        //private int verticalCorrectTick = 23;
+        private int verticalCorrectTick = 23;
+        private int mode;
+        public int countAll = 0;
 
-        public webcam(DsDevice dev)
+        IniFile INI = new IniFile("config.ini");
+
+        public webcam(DsDevice dev, int modeIn = 0)
         {
             object camDevice;
             Guid iid = typeof(IBaseFilter).GUID;
-
-
+            mode = modeIn;
             device = dev;
             device.Mon.BindToObject(null, null, ref iid, out camDevice);
             IBaseFilter camFilter = camDevice as IBaseFilter;
             pCameraControl = camFilter as IAMCameraControl;
             pVideoProcAmp = camFilter as IAMVideoProcAmp;
 
+            string path = device.DevicePath;
 
             InitializeComponent();
 
             gBox.Text = device.Name;
 
-            Debug.WriteLine(device.Name);
-
             if (pCameraControl != null)
             {
-                InitCameraControlPropertyItem(lbFocus, tBarFocus, cbFocus, CameraControlProperty.Focus);
-                InitCameraControlPropertyItem(lbExposure, tBarExposure, cbExposure, CameraControlProperty.Exposure);
-                InitCameraControlPropertyItem(lbIris, tBarIris, cbIris, CameraControlProperty.Iris);
-                InitCameraControlPropertyItem(lbZoom, tBarZoom, cbZoom, CameraControlProperty.Zoom);
-                InitCameraControlPropertyItem(lbPan, tBarPan, cbPan, CameraControlProperty.Pan);
-                InitCameraControlPropertyItem(lbTilt, tBarTilt, cbTilt, CameraControlProperty.Tilt);
-                InitCameraControlPropertyItem(lbRoll, tBarRoll, cbRoll, CameraControlProperty.Roll);
+                InitItem(lbFocus, tBarFocus, cbFocus, cbFocusAll, cbFocusUSB, CameraControlProperty.Focus);
+                InitItem(lbExposure, tBarExposure, cbExposure, cbExposureAll, cbExposureUSB, CameraControlProperty.Exposure);
+                InitItem(lbIris, tBarIris, cbIris, cbIrisAll, cbIrisUSB, CameraControlProperty.Iris);
+                InitItem(lbZoom, tBarZoom, cbZoom, cbZoomAll, cbZoomUSB, CameraControlProperty.Zoom);
+                InitItem(lbPan, tBarPan, cbPan, cbPanAll, cbPanUSB, CameraControlProperty.Pan);
+                InitItem(lbTilt, tBarTilt, cbTilt, cbTiltAll, cbTiltUSB, CameraControlProperty.Tilt);
+                InitItem(lbRoll, tBarRoll, cbRoll, cbRollAll, cbRollUSB, CameraControlProperty.Roll);
             }
 
             if (pVideoProcAmp != null)
             {
-                InitVideoProcAmpItem(lbBrightness, tBarBrightness, cbBrightness, VideoProcAmpProperty.Brightness);
-                InitVideoProcAmpItem(lbContrast, tBarContrast, cbContrast, VideoProcAmpProperty.Contrast);
-                InitVideoProcAmpItem(lbHue, tBarHue, cbHue, VideoProcAmpProperty.Hue);
-                InitVideoProcAmpItem(lbSaturation, tBarSaturation, cbSaturation, VideoProcAmpProperty.Saturation);
-                InitVideoProcAmpItem(lbSharpness, tBarSharpness, cbSharpness, VideoProcAmpProperty.Sharpness);
-                InitVideoProcAmpItem(lbGamma, tBarGamma, cbGamma, VideoProcAmpProperty.Gamma);
-                InitVideoProcAmpItem(lbColorEnable, tBarColorEnable, cbColorEnable, VideoProcAmpProperty.ColorEnable);
-                InitVideoProcAmpItem(lbWhiteBalance, tBarWhiteBalance, cbWhiteBalance, VideoProcAmpProperty.WhiteBalance);
-                InitVideoProcAmpItem(lbBacklightCompensation, tBarBacklightCompensation, cbBacklightCompensation, VideoProcAmpProperty.BacklightCompensation);
-                InitVideoProcAmpItem(lbGain, tBarGain, cbGain, VideoProcAmpProperty.Gain);
+                InitItem(lbBrightness, tBarBrightness, cbBrightness, cbBrightnessAll, cbBrightnessUSB, VideoProcAmpProperty.Brightness);
+                InitItem(lbContrast, tBarContrast, cbContrast, cbContrastAll, cbContrastUSB, VideoProcAmpProperty.Contrast);
+                InitItem(lbHue, tBarHue, cbHue, cbHueAll, cbHueUSB, VideoProcAmpProperty.Hue);
+                InitItem(lbSaturation, tBarSaturation, cbSaturation, cbSaturationAll, cbSaturationUSB, VideoProcAmpProperty.Saturation);
+                InitItem(lbSharpness, tBarSharpness, cbSharpness, cbSharpnessAll, cbSharpnessUSB, VideoProcAmpProperty.Sharpness);
+                InitItem(lbGamma, tBarGamma, cbGamma, cbGammaAll, cbGamma, VideoProcAmpProperty.Gamma);
+                InitItem(lbColorEnable, tBarColorEnable, cbColorEnable, cbColorEnableAll, cbColorEnableUSB, VideoProcAmpProperty.ColorEnable);
+                InitItem(lbWhiteBalance, tBarWhiteBalance, cbWhiteBalance, cbWhiteBalanceAll, cbWhiteBalanceUSB, VideoProcAmpProperty.WhiteBalance);
+                InitItem(lbBacklightCompensation, tBarBacklightCompensation, cbBacklightCompensation, cbBacklightCompensationAll, cbBacklightCompensationUSB, VideoProcAmpProperty.BacklightCompensation);
+                InitItem(lbGain, tBarGain, cbGain, cbGainAll, cbGainUSB, VideoProcAmpProperty.Gain);
             }
 
 
-            // Изменение размера Groupbox
-            defaultButton.Location = new Point(defaultButton.Location.X, defaultButton.Location.Y - verticalCorrect);
-            gBox.Height -= verticalCorrect;
-        }
-
-        private void InitCameraControlPropertyItem(Label lb, TrackBar tBar, CheckBox cb, CameraControlProperty prop)
-        {
-            int pMax, pMin, pValue, pDefault, pSteppingDelta;
-            CameraControlFlags cameraFlags;
-            pCameraControl.GetRange(prop, out pMin, out pMax, out pSteppingDelta, out pDefault, out cameraFlags);
-            Debug.WriteLine("{0} {1},{2},{3},{4},{5}", prop, pMin, pMax, pSteppingDelta, pDefault, cameraFlags);
-            if (cameraFlags == CameraControlFlags.None)
+            if (mode != 0)
             {
-                //lb.Visible = false;
-                //cb.Visible = false;
-                //tBar.Visible = false;
-                //verticalCorrect += verticalCorrectTick;
-                lb.Enabled = false;
-                cb.Enabled = false;
-                tBar.Enabled = false;
+                // Изменение размера Groupbox
+                verticalCorrect += saveButton.Location.Y + saveButton.Height - comboBox1.Location.Y;
+                gBox.Height -= verticalCorrect;
+                this.Height -= verticalCorrect;
+                preset2Button.Visible = false;
+                preset1Button.Visible = false;
+                comboBox1.Visible = false;
+                defaultButton.Visible = false;
+                saveButton.Visible = false;
+            }
+            InitCameraControlPropertyItem2(VideoProcAmpProperty.Sharpness);
+            InitCameraControlPropertyItem2(CameraControlProperty.Iris);
+        }
+        private void InitCameraControlPropertyItem2(/*Label lb, TrackBar tBar, CheckBox cbAuto, CheckBox cbAll, CheckBox cbUSB, */object prop)
+        {
+            Debug.WriteLine(prop.GetType());
+
+
+        }
+            private void InitItem(Label lb, TrackBar tBar, CheckBox cbAuto, CheckBox cbAll, CheckBox cbUSB, object prop)
+        {
+
+            if ((mode != 0) &&
+                INI.KeyExists("All_" + prop.ToString(), device.DevicePath) &&
+                !"True".Equals(INI.ReadINI(device.DevicePath, "All_" + prop.ToString()))
+                )
+            {
+                verticalCorrect += verticalCorrectTick;
+                lb.Visible = false;
+                cbAuto.Visible = false;
+                cbAll.Visible = false;
+                cbUSB.Visible = false;
+                tBar.Visible = false;
+                return;
+            }
+
+            bool none, autoSupport, manualSupport, auto, manual;
+            int pMax, pMin, pValue, pDefault, pSteppingDelta;
+            if (Object.ReferenceEquals(prop.GetType(), new VideoProcAmpProperty().GetType()))
+            {
+                CameraControlFlags cameraFlags;
+                pCameraControl.GetRange((CameraControlProperty)prop, out pMin, out pMax, out pSteppingDelta, out pDefault, out cameraFlags);
+                none = cameraFlags == CameraControlFlags.None;
+                autoSupport = cameraFlags == CameraControlFlags.Auto;
+                manualSupport = cameraFlags == CameraControlFlags.Manual;
+                pCameraControl.Get((CameraControlProperty)prop, out pValue, out cameraFlags);
+                auto = cameraFlags == CameraControlFlags.Auto;
+                manual = cameraFlags == CameraControlFlags.Manual;
             }
             else
             {
-                CameraControlFlags currentFlags;
-                pCameraControl.Get(prop, out pValue, out currentFlags);
-                Debug.WriteLine("Current value: {0},{1}", pValue, currentFlags);
-                lb.Enabled = true;
-                cb.Checked = (currentFlags == CameraControlFlags.Auto);
-                cb.Enabled = !(cameraFlags == CameraControlFlags.Manual);
-                tBar.Enabled = (currentFlags == CameraControlFlags.Manual);
+                // VideoProcAmpProperty
+                VideoProcAmpFlags cameraFlags;
+                pVideoProcAmp.GetRange((VideoProcAmpProperty)prop, out pMin, out pMax, out pSteppingDelta, out pDefault, out cameraFlags);
+                none = cameraFlags == VideoProcAmpFlags.None;
+                autoSupport = cameraFlags == VideoProcAmpFlags.Auto;
+                manualSupport = cameraFlags == VideoProcAmpFlags.Manual;
+                pVideoProcAmp.Get((VideoProcAmpProperty)prop, out pValue, out cameraFlags);
+                auto = cameraFlags == VideoProcAmpFlags.Auto;
+                manual = cameraFlags == VideoProcAmpFlags.Manual;
+            }
+
+
+            lb.Enabled = !none;
+            cbAuto.Enabled = !none;
+            cbAll.Enabled = !none;
+            cbUSB.Enabled = !none;
+            tBar.Enabled = !none;
+            if (!none)
+            {
+                cbAuto.Checked = auto;
+                cbAuto.Enabled = !manualSupport;
+                tBar.Enabled = manual;
                 tBar.Minimum = pMin;
                 tBar.Maximum = pMax;
                 tBar.TickFrequency = pSteppingDelta;
                 //tBarFocus.Value = pValue;
                 tBar.Value = pMax - pValue + pMin;
 
-                //lb.Location = new Point(lb.Location.X, lb.Location.Y - verticalCorrect);
-                //cb.Location = new Point(cb.Location.X, cb.Location.Y - verticalCorrect);
-                //tBar.Location = new Point(tBar.Location.X, tBar.Location.Y - verticalCorrect);
+                if (mode != 0)
+                {
+                    cbUSB.Checked = false;
+                    cbAll.Visible = false;
+                    tBar.Width = 208;
+                }
+                else
+                {
+
+                    if (INI.KeyExists("All_" + prop.ToString(), device.DevicePath))
+                    {
+                        cbAll.Checked = "True".Equals(INI.ReadINI(device.DevicePath, "All_" + prop.ToString()));
+                        countAll += cbAll.Checked ? 1 : 0;
+                    }
+                    if (INI.KeyExists("USB_" + prop.ToString(), device.DevicePath))
+                        cbUSB.Checked = "True".Equals(INI.ReadINI(device.DevicePath, "USB_" + prop.ToString()));
+                }
+
+                lb.Location = new Point(lb.Location.X, lb.Location.Y - verticalCorrect);
+                cbAuto.Location = new Point(cbAuto.Location.X, cbAuto.Location.Y - verticalCorrect);
+                cbAll.Location = new Point(cbAll.Location.X, cbAll.Location.Y - verticalCorrect);
+                tBar.Location = new Point(tBar.Location.X, tBar.Location.Y - verticalCorrect);
             }
         }
-        private void InitVideoProcAmpItem(Label lb, TrackBar tBar, CheckBox cb, VideoProcAmpProperty prop)
+        private void InitVideoProcAmpItem(Label lb, TrackBar tBar, CheckBox cbAuto, CheckBox cbAll, CheckBox cbUSB, VideoProcAmpProperty prop)
         {
+            if ((mode != 0) &&
+                INI.KeyExists("All_" + prop.ToString(), device.DevicePath) &&
+                !"True".Equals(INI.ReadINI(device.DevicePath, "All_" + prop.ToString()))
+                )
+            {
+                verticalCorrect += verticalCorrectTick;
+                lb.Visible = false;
+                cbAuto.Visible = false;
+                cbAll.Visible = false;
+                cbUSB.Visible = false;
+                tBar.Visible = false;
+                return;
+            }
+
             int pMax, pMin, pValue, pDefault, pSteppingDelta;
             VideoProcAmpFlags cameraFlags;
             pVideoProcAmp.GetRange(prop, out pMin, out pMax, out pSteppingDelta, out pDefault, out cameraFlags);
-            Debug.WriteLine("{0} {1},{2},{3},{4},{5}", prop, pMin, pMax, pSteppingDelta, pDefault, cameraFlags);
+            //Debug.WriteLine("{0} {1},{2},{3},{4},{5}", prop, pMin, pMax, pSteppingDelta, pDefault, cameraFlags);
             if (cameraFlags == VideoProcAmpFlags.None)
             {
-                //lb.Visible = false;
-                //cb.Visible = false;
-                //tBar.Visible = false;
-                //verticalCorrect += verticalCorrectTick;
                 lb.Enabled = false;
-                cb.Enabled = false;
+                cbAuto.Enabled = false;
+                cbAll.Enabled = false;
+                cbUSB.Enabled = false;
                 tBar.Enabled = false;
             }
             else
             {
+                cbAll.Enabled = true;
+                cbUSB.Enabled = true;
                 VideoProcAmpFlags currentFlags;
                 pVideoProcAmp.Get(prop, out pValue, out currentFlags);
-                Debug.WriteLine("Current value: {0},{1}", pValue, currentFlags);
+                //Debug.WriteLine("Current value: {0},{1}", pValue, currentFlags);
                 lb.Enabled = true;
-                cb.Checked = (currentFlags == VideoProcAmpFlags.Auto);
-                cb.Enabled = !(cameraFlags == VideoProcAmpFlags.Manual);
+                cbAuto.Checked = (currentFlags == VideoProcAmpFlags.Auto);
+                cbAuto.Enabled = !(cameraFlags == VideoProcAmpFlags.Manual);
                 tBar.Enabled = (currentFlags == VideoProcAmpFlags.Manual);
                 tBar.Minimum = pMin;
                 tBar.Maximum = pMax;
                 tBar.TickFrequency = pSteppingDelta;
                 //tBarFocus.Value = pValue;
                 tBar.Value = pMax - pValue + pMin;
+                if (mode != 0)
+                {
+                    cbUSB.Checked = false;
+                    cbAll.Visible = false;
+                    tBar.Width = 208;
+                }
+                else
+                {
 
-                //lb.Location = new Point(lb.Location.X, lb.Location.Y - verticalCorrect);
-                //cb.Location = new Point(cb.Location.X, cb.Location.Y - verticalCorrect);
-                //tBar.Location = new Point(tBar.Location.X, tBar.Location.Y - verticalCorrect);
+                    if (INI.KeyExists("All_" + prop.ToString(), device.DevicePath))
+                    {
+                        cbAll.Checked = "True".Equals(INI.ReadINI(device.DevicePath, "All_" + prop.ToString()));
+                        countAll += cbAll.Checked ? 1 : 0;
+                    }
+                    if (INI.KeyExists("USB_" + prop.ToString(), device.DevicePath))
+                        cbUSB.Checked = "True".Equals(INI.ReadINI(device.DevicePath, "USB_" + prop.ToString()));
+                }
+
+                lb.Location = new Point(lb.Location.X, lb.Location.Y - verticalCorrect);
+                cbAuto.Location = new Point(cbAuto.Location.X, cbAuto.Location.Y - verticalCorrect);
+                cbAll.Location = new Point(cbAll.Location.X, cbAll.Location.Y - verticalCorrect);
+                tBar.Location = new Point(tBar.Location.X, tBar.Location.Y - verticalCorrect);
             }
         }
 
@@ -589,34 +689,29 @@ namespace webcamControl
 
         private void defaultButton_Click(object sender, EventArgs e)
         {
-            if (pCameraControl != null)
-            {
-                SetDefaultCameraControlPropertyItem(lbFocus, tBarFocus, cbFocus, CameraControlProperty.Focus);
-                SetDefaultCameraControlPropertyItem(lbExposure, tBarExposure, cbExposure, CameraControlProperty.Exposure);
-                SetDefaultCameraControlPropertyItem(lbIris, tBarIris, cbIris, CameraControlProperty.Iris);
-                SetDefaultCameraControlPropertyItem(lbZoom, tBarZoom, cbZoom, CameraControlProperty.Zoom);
-                SetDefaultCameraControlPropertyItem(lbPan, tBarPan, cbPan, CameraControlProperty.Pan);
-                SetDefaultCameraControlPropertyItem(lbTilt, tBarTilt, cbTilt, CameraControlProperty.Tilt);
-                SetDefaultCameraControlPropertyItem(lbRoll, tBarRoll, cbRoll, CameraControlProperty.Roll);
-            }
+            SetDefaultCameraControlPropertyItem(lbFocus, tBarFocus, cbFocus, CameraControlProperty.Focus);
+            SetDefaultCameraControlPropertyItem(lbExposure, tBarExposure, cbExposure, CameraControlProperty.Exposure);
+            SetDefaultCameraControlPropertyItem(lbIris, tBarIris, cbIris, CameraControlProperty.Iris);
+            SetDefaultCameraControlPropertyItem(lbZoom, tBarZoom, cbZoom, CameraControlProperty.Zoom);
+            SetDefaultCameraControlPropertyItem(lbPan, tBarPan, cbPan, CameraControlProperty.Pan);
+            SetDefaultCameraControlPropertyItem(lbTilt, tBarTilt, cbTilt, CameraControlProperty.Tilt);
+            SetDefaultCameraControlPropertyItem(lbRoll, tBarRoll, cbRoll, CameraControlProperty.Roll);
 
-            if (pVideoProcAmp != null)
-            {
-                SetDefaultVideoProcAmpItem(lbBrightness, tBarBrightness, cbBrightness, VideoProcAmpProperty.Brightness);
-                SetDefaultVideoProcAmpItem(lbContrast, tBarContrast, cbContrast, VideoProcAmpProperty.Contrast);
-                SetDefaultVideoProcAmpItem(lbHue, tBarHue, cbHue, VideoProcAmpProperty.Hue);
-                SetDefaultVideoProcAmpItem(lbSaturation, tBarSaturation, cbSaturation, VideoProcAmpProperty.Saturation);
-                SetDefaultVideoProcAmpItem(lbSharpness, tBarSharpness, cbSharpness, VideoProcAmpProperty.Sharpness);
-                SetDefaultVideoProcAmpItem(lbGamma, tBarGamma, cbGamma, VideoProcAmpProperty.Gamma);
-                SetDefaultVideoProcAmpItem(lbColorEnable, tBarColorEnable, cbColorEnable, VideoProcAmpProperty.ColorEnable);
-                SetDefaultVideoProcAmpItem(lbWhiteBalance, tBarWhiteBalance, cbWhiteBalance, VideoProcAmpProperty.WhiteBalance);
-                SetDefaultVideoProcAmpItem(lbBacklightCompensation, tBarBacklightCompensation, cbBacklightCompensation, VideoProcAmpProperty.BacklightCompensation);
-                SetDefaultVideoProcAmpItem(lbGain, tBarGain, cbGain, VideoProcAmpProperty.Gain);
-            }
+            SetDefaultVideoProcAmpItem(lbBrightness, tBarBrightness, cbBrightness, VideoProcAmpProperty.Brightness);
+            SetDefaultVideoProcAmpItem(lbContrast, tBarContrast, cbContrast, VideoProcAmpProperty.Contrast);
+            SetDefaultVideoProcAmpItem(lbHue, tBarHue, cbHue, VideoProcAmpProperty.Hue);
+            SetDefaultVideoProcAmpItem(lbSaturation, tBarSaturation, cbSaturation, VideoProcAmpProperty.Saturation);
+            SetDefaultVideoProcAmpItem(lbSharpness, tBarSharpness, cbSharpness, VideoProcAmpProperty.Sharpness);
+            SetDefaultVideoProcAmpItem(lbGamma, tBarGamma, cbGamma, VideoProcAmpProperty.Gamma);
+            SetDefaultVideoProcAmpItem(lbColorEnable, tBarColorEnable, cbColorEnable, VideoProcAmpProperty.ColorEnable);
+            SetDefaultVideoProcAmpItem(lbWhiteBalance, tBarWhiteBalance, cbWhiteBalance, VideoProcAmpProperty.WhiteBalance);
+            SetDefaultVideoProcAmpItem(lbBacklightCompensation, tBarBacklightCompensation, cbBacklightCompensation, VideoProcAmpProperty.BacklightCompensation);
+            SetDefaultVideoProcAmpItem(lbGain, tBarGain, cbGain, VideoProcAmpProperty.Gain);
 
         }
         private void SetDefaultCameraControlPropertyItem(Label lb, TrackBar tBar, CheckBox cb, CameraControlProperty prop)
         {
+            if (pCameraControl == null) return;
             int pMax, pMin, pValue, pDefault, pSteppingDelta;
             CameraControlFlags cameraFlags;
             pCameraControl.GetRange(prop, out pMin, out pMax, out pSteppingDelta, out pDefault, out cameraFlags);
@@ -628,6 +723,7 @@ namespace webcamControl
         }
         private void SetDefaultVideoProcAmpItem(Label lb, TrackBar tBar, CheckBox cb, VideoProcAmpProperty prop)
         {
+            if (pVideoProcAmp == null) return;
             int pMax, pMin, pValue, pDefault, pSteppingDelta;
             VideoProcAmpFlags cameraFlags;
             pVideoProcAmp.GetRange(prop, out pMin, out pMax, out pSteppingDelta, out pDefault, out cameraFlags);
@@ -636,6 +732,159 @@ namespace webcamControl
             tBar.Enabled = !(cameraFlags == VideoProcAmpFlags.Auto);
             tBar.Value = pMax - pDefault + pMin;
             pVideoProcAmp.Set(prop, pDefault, (cameraFlags == VideoProcAmpFlags.Auto) ? VideoProcAmpFlags.Auto : VideoProcAmpFlags.Manual);
+        }
+
+        private void lbFocus_DoubleClick(object sender, EventArgs e)
+        {
+            if ((sender is TrackBar) && (((MouseEventArgs)e).Button == MouseButtons.Left)) return;
+            SetDefaultCameraControlPropertyItem(lbFocus, tBarFocus, cbFocus, CameraControlProperty.Focus);
+        }
+
+        private void lbExposure_DoubleClick(object sender, EventArgs e)
+        {
+            if ((sender is TrackBar) && (((MouseEventArgs)e).Button == MouseButtons.Left)) return;
+            SetDefaultCameraControlPropertyItem(lbExposure, tBarExposure, cbExposure, CameraControlProperty.Exposure);
+        }
+
+        private void lbIris_DoubleClick(object sender, EventArgs e)
+        {
+            if ((sender is TrackBar) && (((MouseEventArgs)e).Button == MouseButtons.Left)) return;
+            SetDefaultCameraControlPropertyItem(lbIris, tBarIris, cbIris, CameraControlProperty.Iris);
+        }
+
+        private void lbZoom_DoubleClick(object sender, EventArgs e)
+        {
+            if ((sender is TrackBar) && (((MouseEventArgs)e).Button == MouseButtons.Left)) return;
+            SetDefaultCameraControlPropertyItem(lbZoom, tBarZoom, cbZoom, CameraControlProperty.Zoom);
+        }
+
+        private void lbPan_DoubleClick(object sender, EventArgs e)
+        {
+            if ((sender is TrackBar) && (((MouseEventArgs)e).Button == MouseButtons.Left)) return;
+            SetDefaultCameraControlPropertyItem(lbPan, tBarPan, cbPan, CameraControlProperty.Pan);
+        }
+
+        private void lbTilt_DoubleClick(object sender, EventArgs e)
+        {
+            if ((sender is TrackBar) && (((MouseEventArgs)e).Button == MouseButtons.Left)) return;
+            SetDefaultCameraControlPropertyItem(lbTilt, tBarTilt, cbTilt, CameraControlProperty.Tilt);
+        }
+
+        private void lbRoll_DoubleClick(object sender, EventArgs e)
+        {
+            if ((sender is TrackBar) && (((MouseEventArgs)e).Button == MouseButtons.Left)) return;
+            SetDefaultCameraControlPropertyItem(lbRoll, tBarRoll, cbRoll, CameraControlProperty.Roll);
+        }
+
+        private void lbBrightness_DoubleClick(object sender, EventArgs e)
+        {
+            if ((sender is TrackBar) && (((MouseEventArgs)e).Button == MouseButtons.Left)) return;
+            SetDefaultVideoProcAmpItem(lbBrightness, tBarBrightness, cbBrightness, VideoProcAmpProperty.Brightness);
+        }
+
+        private void lbContrast_DoubleClick(object sender, EventArgs e)
+        {
+            if ((sender is TrackBar) && (((MouseEventArgs)e).Button == MouseButtons.Left)) return;
+            SetDefaultVideoProcAmpItem(lbContrast, tBarContrast, cbContrast, VideoProcAmpProperty.Contrast);
+        }
+
+        private void lbHue_DoubleClick(object sender, EventArgs e)
+        {
+            if ((sender is TrackBar) && (((MouseEventArgs)e).Button == MouseButtons.Left)) return;
+            SetDefaultVideoProcAmpItem(lbHue, tBarHue, cbHue, VideoProcAmpProperty.Hue);
+        }
+
+        private void lbSaturation_DoubleClick(object sender, EventArgs e)
+        {
+            if ((sender is TrackBar) && (((MouseEventArgs)e).Button == MouseButtons.Left)) return;
+            SetDefaultVideoProcAmpItem(lbSaturation, tBarSaturation, cbSaturation, VideoProcAmpProperty.Saturation);
+        }
+
+        private void lbSharpness_DoubleClick(object sender, EventArgs e)
+        {
+            if ((sender is TrackBar) && (((MouseEventArgs)e).Button == MouseButtons.Left)) return;
+            SetDefaultVideoProcAmpItem(lbSharpness, tBarSharpness, cbSharpness, VideoProcAmpProperty.Sharpness);
+        }
+
+        private void lbGamma_DoubleClick(object sender, EventArgs e)
+        {
+            if ((sender is TrackBar) && (((MouseEventArgs)e).Button == MouseButtons.Left)) return;
+            SetDefaultVideoProcAmpItem(lbGamma, tBarGamma, cbGamma, VideoProcAmpProperty.Gamma);
+        }
+
+        private void lbColorEnable_DoubleClick(object sender, EventArgs e)
+        {
+            if ((sender is TrackBar) && (((MouseEventArgs)e).Button == MouseButtons.Left)) return;
+            SetDefaultVideoProcAmpItem(lbColorEnable, tBarColorEnable, cbColorEnable, VideoProcAmpProperty.ColorEnable);
+        }
+
+        private void lbWhiteBalance_DoubleClick(object sender, EventArgs e)
+        {
+            if ((sender is TrackBar) && (((MouseEventArgs)e).Button == MouseButtons.Left)) return;
+            SetDefaultVideoProcAmpItem(lbWhiteBalance, tBarWhiteBalance, cbWhiteBalance, VideoProcAmpProperty.WhiteBalance);
+        }
+
+        private void lbBacklightCompensation_DoubleClick(object sender, EventArgs e)
+        {
+            if ((sender is TrackBar) && (((MouseEventArgs)e).Button == MouseButtons.Left)) return;
+            SetDefaultVideoProcAmpItem(lbBacklightCompensation, tBarBacklightCompensation, cbBacklightCompensation, VideoProcAmpProperty.BacklightCompensation);
+        }
+
+        private void lbGain_DoubleClick(object sender, EventArgs e)
+        {
+            if ((sender is TrackBar) && (((MouseEventArgs)e).Button == MouseButtons.Left)) return;
+            SetDefaultVideoProcAmpItem(lbGain, tBarGain, cbGain, VideoProcAmpProperty.Gain);
+        }
+
+        private void saveButton_Click(object sender, EventArgs e)
+        {
+            // Отображение на главной
+            INI.Write(device.DevicePath, "All_" + CameraControlProperty.Focus.ToString(), cbFocusAll.Checked.ToString());
+            INI.Write(device.DevicePath, "All_" + CameraControlProperty.Exposure.ToString(), cbExposureAll.Checked.ToString());
+            INI.Write(device.DevicePath, "All_" + CameraControlProperty.Iris.ToString(), cbIrisAll.Checked.ToString());
+            INI.Write(device.DevicePath, "All_" + CameraControlProperty.Zoom.ToString(), cbZoomAll.Checked.ToString());
+            INI.Write(device.DevicePath, "All_" + CameraControlProperty.Pan.ToString(), cbPanAll.Checked.ToString());
+            INI.Write(device.DevicePath, "All_" + CameraControlProperty.Tilt.ToString(), cbTiltAll.Checked.ToString());
+            INI.Write(device.DevicePath, "All_" + CameraControlProperty.Roll.ToString(), cbRollAll.Checked.ToString());
+
+            INI.Write(device.DevicePath, "All_" + VideoProcAmpProperty.Brightness.ToString(), cbBrightnessAll.Checked.ToString());
+            INI.Write(device.DevicePath, "All_" + VideoProcAmpProperty.Contrast.ToString(), cbContrastAll.Checked.ToString());
+            INI.Write(device.DevicePath, "All_" + VideoProcAmpProperty.Hue.ToString(), cbHueAll.Checked.ToString());
+            INI.Write(device.DevicePath, "All_" + VideoProcAmpProperty.Saturation.ToString(), cbSaturationAll.Checked.ToString());
+            INI.Write(device.DevicePath, "All_" + VideoProcAmpProperty.Sharpness.ToString(), cbSharpnessAll.Checked.ToString());
+            INI.Write(device.DevicePath, "All_" + VideoProcAmpProperty.Gamma.ToString(), cbGammaAll.Checked.ToString());
+            INI.Write(device.DevicePath, "All_" + VideoProcAmpProperty.ColorEnable.ToString(), cbColorEnableAll.Checked.ToString());
+            INI.Write(device.DevicePath, "All_" + VideoProcAmpProperty.WhiteBalance.ToString(), cbWhiteBalanceAll.Checked.ToString());
+            INI.Write(device.DevicePath, "All_" + VideoProcAmpProperty.BacklightCompensation.ToString(), cbBacklightCompensationAll.Checked.ToString());
+            INI.Write(device.DevicePath, "All_" + VideoProcAmpProperty.Gain.ToString(), cbGainAll.Checked.ToString());
+
+            // Управление аппаратной крутилкой
+            INI.Write(device.DevicePath, "USB_" + CameraControlProperty.Focus.ToString(), cbFocusUSB.Checked.ToString());
+            INI.Write(device.DevicePath, "USB_" + CameraControlProperty.Exposure.ToString(), cbExposureUSB.Checked.ToString());
+            INI.Write(device.DevicePath, "USB_" + CameraControlProperty.Iris.ToString(), cbIrisUSB.Checked.ToString());
+            INI.Write(device.DevicePath, "USB_" + CameraControlProperty.Zoom.ToString(), cbZoomUSB.Checked.ToString());
+            INI.Write(device.DevicePath, "USB_" + CameraControlProperty.Pan.ToString(), cbPanUSB.Checked.ToString());
+            INI.Write(device.DevicePath, "USB_" + CameraControlProperty.Tilt.ToString(), cbTiltUSB.Checked.ToString());
+            INI.Write(device.DevicePath, "USB_" + CameraControlProperty.Roll.ToString(), cbRollUSB.Checked.ToString());
+
+            INI.Write(device.DevicePath, "USB_" + VideoProcAmpProperty.Brightness.ToString(), cbBrightnessUSB.Checked.ToString());
+            INI.Write(device.DevicePath, "USB_" + VideoProcAmpProperty.Contrast.ToString(), cbContrastUSB.Checked.ToString());
+            INI.Write(device.DevicePath, "USB_" + VideoProcAmpProperty.Hue.ToString(), cbHueUSB.Checked.ToString());
+            INI.Write(device.DevicePath, "USB_" + VideoProcAmpProperty.Saturation.ToString(), cbSaturationUSB.Checked.ToString());
+            INI.Write(device.DevicePath, "USB_" + VideoProcAmpProperty.Sharpness.ToString(), cbSharpnessUSB.Checked.ToString());
+            INI.Write(device.DevicePath, "USB_" + VideoProcAmpProperty.Gamma.ToString(), cbGammaUSB.Checked.ToString());
+            INI.Write(device.DevicePath, "USB_" + VideoProcAmpProperty.ColorEnable.ToString(), cbColorEnableUSB.Checked.ToString());
+            INI.Write(device.DevicePath, "USB_" + VideoProcAmpProperty.WhiteBalance.ToString(), cbWhiteBalanceUSB.Checked.ToString());
+            INI.Write(device.DevicePath, "USB_" + VideoProcAmpProperty.BacklightCompensation.ToString(), cbBacklightCompensationUSB.Checked.ToString());
+            INI.Write(device.DevicePath, "USB_" + VideoProcAmpProperty.Gain.ToString(), cbGainUSB.Checked.ToString());
+        }
+
+        private void preset1Button_Click(object sender, EventArgs e)
+        {
+        }
+
+        private void preset2Button_Click(object sender, EventArgs e)
+        {
         }
     }
 }

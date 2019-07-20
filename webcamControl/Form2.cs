@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
+using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 using System.Text;
@@ -19,6 +20,7 @@ namespace webcamControl
             DsDevice[] capDev;
             capDev = DsDevice.GetDevicesOfCat(FilterCategory.VideoInputDevice);
 
+            int verticalPosition = 0;
             foreach (DsDevice dev in capDev)
             {
                 TabPage tabPage = new TabPage();
@@ -36,6 +38,17 @@ namespace webcamControl
 
                     tabPage.Controls.Add(ggg);
                     tabControl.Controls.Add(tabPage);
+                    Debug.WriteLine(ggg.countAll);
+                    Debug.WriteLine(verticalPosition);
+                    if (ggg.countAll > 0)
+                    {
+                        ggg = new webcam(dev, 1);
+                        AllPage.Controls.Add(ggg);
+                        ggg.Location = new Point(0, verticalPosition);
+                        Debug.WriteLine(ggg.Height);
+
+                        verticalPosition += ggg.Height;
+                    }
                 }
             }
 

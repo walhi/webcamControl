@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Windows.Forms;
 
+using System.Management; // need to add System.Management to your project references.
+
 namespace webcamControl
 {
     static class Program
@@ -14,7 +16,7 @@ namespace webcamControl
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            Application.Run(new Form2());
+            Application.Run(new Form3());
         }
     }
 }
