@@ -19,8 +19,6 @@ namespace webcamControl
         private DsDevice device;
         private IAMCameraControl pCameraControl;
         private IAMVideoProcAmp pVideoProcAmp;
-        private int verticalCorrect = 0;
-        private int verticalCorrectTick = 23;
         private int mode;
         public int countAll = 0;
 
@@ -43,38 +41,12 @@ namespace webcamControl
 
             gBox.Text = device.Name;
 
-            if (pCameraControl != null)
-            {
-                InitItem(lbFocus, tBarFocus, cbFocus, cbFocusAll, cbFocusUSB, CameraControlProperty.Focus);
-                InitItem(lbExposure, tBarExposure, cbExposure, cbExposureAll, cbExposureUSB, CameraControlProperty.Exposure);
-                InitItem(lbIris, tBarIris, cbIris, cbIrisAll, cbIrisUSB, CameraControlProperty.Iris);
-                InitItem(lbZoom, tBarZoom, cbZoom, cbZoomAll, cbZoomUSB, CameraControlProperty.Zoom);
-                InitItem(lbPan, tBarPan, cbPan, cbPanAll, cbPanUSB, CameraControlProperty.Pan);
-                InitItem(lbTilt, tBarTilt, cbTilt, cbTiltAll, cbTiltUSB, CameraControlProperty.Tilt);
-                InitItem(lbRoll, tBarRoll, cbRoll, cbRollAll, cbRollUSB, CameraControlProperty.Roll);
-            }
-
-            if (pVideoProcAmp != null)
-            {
-                InitItem(lbBrightness, tBarBrightness, cbBrightness, cbBrightnessAll, cbBrightnessUSB, VideoProcAmpProperty.Brightness);
-                InitItem(lbContrast, tBarContrast, cbContrast, cbContrastAll, cbContrastUSB, VideoProcAmpProperty.Contrast);
-                InitItem(lbHue, tBarHue, cbHue, cbHueAll, cbHueUSB, VideoProcAmpProperty.Hue);
-                InitItem(lbSaturation, tBarSaturation, cbSaturation, cbSaturationAll, cbSaturationUSB, VideoProcAmpProperty.Saturation);
-                InitItem(lbSharpness, tBarSharpness, cbSharpness, cbSharpnessAll, cbSharpnessUSB, VideoProcAmpProperty.Sharpness);
-                InitItem(lbGamma, tBarGamma, cbGamma, cbGammaAll, cbGamma, VideoProcAmpProperty.Gamma);
-                InitItem(lbColorEnable, tBarColorEnable, cbColorEnable, cbColorEnableAll, cbColorEnableUSB, VideoProcAmpProperty.ColorEnable);
-                InitItem(lbWhiteBalance, tBarWhiteBalance, cbWhiteBalance, cbWhiteBalanceAll, cbWhiteBalanceUSB, VideoProcAmpProperty.WhiteBalance);
-                InitItem(lbBacklightCompensation, tBarBacklightCompensation, cbBacklightCompensation, cbBacklightCompensationAll, cbBacklightCompensationUSB, VideoProcAmpProperty.BacklightCompensation);
-                InitItem(lbGain, tBarGain, cbGain, cbGainAll, cbGainUSB, VideoProcAmpProperty.Gain);
-            }
-
-
             if (mode != 0)
             {
                 // Изменение размера Groupbox
-                verticalCorrect += saveButton.Location.Y + saveButton.Height - comboBox1.Location.Y;
-                gBox.Height -= verticalCorrect;
-                this.Height -= verticalCorrect;
+                //verticalCorrect += saveButton.Location.Y + saveButton.Height - comboBox1.Location.Y;
+                //gBox.Height -= verticalCorrect;
+                //this.Height -= verticalCorrect;
                 preset2Button.Visible = false;
                 preset1Button.Visible = false;
                 comboBox1.Visible = false;
@@ -90,159 +62,6 @@ namespace webcamControl
 
 
         }
-            private void InitItem(Label lb, TrackBar tBar, CheckBox cbAuto, CheckBox cbAll, CheckBox cbUSB, object prop)
-        {
-
-            if ((mode != 0) &&
-                INI.KeyExists("All_" + prop.ToString(), device.DevicePath) &&
-                !"True".Equals(INI.ReadINI(device.DevicePath, "All_" + prop.ToString()))
-                )
-            {
-                verticalCorrect += verticalCorrectTick;
-                lb.Visible = false;
-                cbAuto.Visible = false;
-                cbAll.Visible = false;
-                cbUSB.Visible = false;
-                tBar.Visible = false;
-                return;
-            }
-
-            bool none, autoSupport, manualSupport, auto, manual;
-            int pMax, pMin, pValue, pDefault, pSteppingDelta;
-            if (Object.ReferenceEquals(prop.GetType(), new VideoProcAmpProperty().GetType()))
-            {
-                CameraControlFlags cameraFlags;
-                pCameraControl.GetRange((CameraControlProperty)prop, out pMin, out pMax, out pSteppingDelta, out pDefault, out cameraFlags);
-                none = cameraFlags == CameraControlFlags.None;
-                autoSupport = cameraFlags == CameraControlFlags.Auto;
-                manualSupport = cameraFlags == CameraControlFlags.Manual;
-                pCameraControl.Get((CameraControlProperty)prop, out pValue, out cameraFlags);
-                auto = cameraFlags == CameraControlFlags.Auto;
-                manual = cameraFlags == CameraControlFlags.Manual;
-            }
-            else
-            {
-                // VideoProcAmpProperty
-                VideoProcAmpFlags cameraFlags;
-                pVideoProcAmp.GetRange((VideoProcAmpProperty)prop, out pMin, out pMax, out pSteppingDelta, out pDefault, out cameraFlags);
-                none = cameraFlags == VideoProcAmpFlags.None;
-                autoSupport = cameraFlags == VideoProcAmpFlags.Auto;
-                manualSupport = cameraFlags == VideoProcAmpFlags.Manual;
-                pVideoProcAmp.Get((VideoProcAmpProperty)prop, out pValue, out cameraFlags);
-                auto = cameraFlags == VideoProcAmpFlags.Auto;
-                manual = cameraFlags == VideoProcAmpFlags.Manual;
-            }
-
-
-            lb.Enabled = !none;
-            cbAuto.Enabled = !none;
-            cbAll.Enabled = !none;
-            cbUSB.Enabled = !none;
-            tBar.Enabled = !none;
-            if (!none)
-            {
-                cbAuto.Checked = auto;
-                cbAuto.Enabled = !manualSupport;
-                tBar.Enabled = manual;
-                tBar.Minimum = pMin;
-                tBar.Maximum = pMax;
-                tBar.TickFrequency = pSteppingDelta;
-                //tBarFocus.Value = pValue;
-                tBar.Value = pMax - pValue + pMin;
-
-                if (mode != 0)
-                {
-                    cbUSB.Checked = false;
-                    cbAll.Visible = false;
-                    tBar.Width = 208;
-                }
-                else
-                {
-
-                    if (INI.KeyExists("All_" + prop.ToString(), device.DevicePath))
-                    {
-                        cbAll.Checked = "True".Equals(INI.ReadINI(device.DevicePath, "All_" + prop.ToString()));
-                        countAll += cbAll.Checked ? 1 : 0;
-                    }
-                    if (INI.KeyExists("USB_" + prop.ToString(), device.DevicePath))
-                        cbUSB.Checked = "True".Equals(INI.ReadINI(device.DevicePath, "USB_" + prop.ToString()));
-                }
-
-                lb.Location = new Point(lb.Location.X, lb.Location.Y - verticalCorrect);
-                cbAuto.Location = new Point(cbAuto.Location.X, cbAuto.Location.Y - verticalCorrect);
-                cbAll.Location = new Point(cbAll.Location.X, cbAll.Location.Y - verticalCorrect);
-                tBar.Location = new Point(tBar.Location.X, tBar.Location.Y - verticalCorrect);
-            }
-        }
-        private void InitVideoProcAmpItem(Label lb, TrackBar tBar, CheckBox cbAuto, CheckBox cbAll, CheckBox cbUSB, VideoProcAmpProperty prop)
-        {
-            if ((mode != 0) &&
-                INI.KeyExists("All_" + prop.ToString(), device.DevicePath) &&
-                !"True".Equals(INI.ReadINI(device.DevicePath, "All_" + prop.ToString()))
-                )
-            {
-                verticalCorrect += verticalCorrectTick;
-                lb.Visible = false;
-                cbAuto.Visible = false;
-                cbAll.Visible = false;
-                cbUSB.Visible = false;
-                tBar.Visible = false;
-                return;
-            }
-
-            int pMax, pMin, pValue, pDefault, pSteppingDelta;
-            VideoProcAmpFlags cameraFlags;
-            pVideoProcAmp.GetRange(prop, out pMin, out pMax, out pSteppingDelta, out pDefault, out cameraFlags);
-            //Debug.WriteLine("{0} {1},{2},{3},{4},{5}", prop, pMin, pMax, pSteppingDelta, pDefault, cameraFlags);
-            if (cameraFlags == VideoProcAmpFlags.None)
-            {
-                lb.Enabled = false;
-                cbAuto.Enabled = false;
-                cbAll.Enabled = false;
-                cbUSB.Enabled = false;
-                tBar.Enabled = false;
-            }
-            else
-            {
-                cbAll.Enabled = true;
-                cbUSB.Enabled = true;
-                VideoProcAmpFlags currentFlags;
-                pVideoProcAmp.Get(prop, out pValue, out currentFlags);
-                //Debug.WriteLine("Current value: {0},{1}", pValue, currentFlags);
-                lb.Enabled = true;
-                cbAuto.Checked = (currentFlags == VideoProcAmpFlags.Auto);
-                cbAuto.Enabled = !(cameraFlags == VideoProcAmpFlags.Manual);
-                tBar.Enabled = (currentFlags == VideoProcAmpFlags.Manual);
-                tBar.Minimum = pMin;
-                tBar.Maximum = pMax;
-                tBar.TickFrequency = pSteppingDelta;
-                //tBarFocus.Value = pValue;
-                tBar.Value = pMax - pValue + pMin;
-                if (mode != 0)
-                {
-                    cbUSB.Checked = false;
-                    cbAll.Visible = false;
-                    tBar.Width = 208;
-                }
-                else
-                {
-
-                    if (INI.KeyExists("All_" + prop.ToString(), device.DevicePath))
-                    {
-                        cbAll.Checked = "True".Equals(INI.ReadINI(device.DevicePath, "All_" + prop.ToString()));
-                        countAll += cbAll.Checked ? 1 : 0;
-                    }
-                    if (INI.KeyExists("USB_" + prop.ToString(), device.DevicePath))
-                        cbUSB.Checked = "True".Equals(INI.ReadINI(device.DevicePath, "USB_" + prop.ToString()));
-                }
-
-                lb.Location = new Point(lb.Location.X, lb.Location.Y - verticalCorrect);
-                cbAuto.Location = new Point(cbAuto.Location.X, cbAuto.Location.Y - verticalCorrect);
-                cbAll.Location = new Point(cbAll.Location.X, cbAll.Location.Y - verticalCorrect);
-                tBar.Location = new Point(tBar.Location.X, tBar.Location.Y - verticalCorrect);
-            }
-        }
-
         private void cbFocus_CheckedChanged(object sender, EventArgs e)
         {
             CheckBox cb = (CheckBox)sender;

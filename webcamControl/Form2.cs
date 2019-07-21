@@ -20,7 +20,6 @@ namespace webcamControl
             DsDevice[] capDev;
             capDev = DsDevice.GetDevicesOfCat(FilterCategory.VideoInputDevice);
 
-            int verticalPosition = 0;
             foreach (DsDevice dev in capDev)
             {
                 TabPage tabPage = new TabPage();
@@ -34,24 +33,47 @@ namespace webcamControl
                 IAMVideoProcAmp pVideoProcAmp = camFilter as IAMVideoProcAmp;
                 if (pCameraControl != null)
                 {
-                    webcam ggg = new webcam(dev);
-
+                    AllProperties ggg = new AllProperties(dev);
+                    ggg.AutoSize = true;
+                    ggg.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
                     tabPage.Controls.Add(ggg);
                     tabControl.Controls.Add(tabPage);
-                    Debug.WriteLine(ggg.countAll);
-                    Debug.WriteLine(verticalPosition);
-                    if (ggg.countAll > 0)
-                    {
-                        ggg = new webcam(dev, 1);
-                        AllPage.Controls.Add(ggg);
-                        ggg.Location = new Point(0, verticalPosition);
-                        Debug.WriteLine(ggg.Height);
+                }
+            }
+            InitSelected();
+        }
 
-                        verticalPosition += ggg.Height;
+        public void InitSelected()
+        {
+            DsDevice[] capDev;
+            capDev = DsDevice.GetDevicesOfCat(FilterCategory.VideoInputDevice);
+            AllPage.Controls.Clear();
+
+            TableLayoutPanel tl = new TableLayoutPanel
+            {
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink
+            };
+
+            foreach (DsDevice dev in capDev)
+            {
+                object camDevice;
+                Guid iid = typeof(IBaseFilter).GUID;
+
+                dev.Mon.BindToObject(null, null, ref iid, out camDevice);
+                IBaseFilter camFilter = camDevice as IBaseFilter;
+                IAMCameraControl pCameraControl = camFilter as IAMCameraControl;
+                IAMVideoProcAmp pVideoProcAmp = camFilter as IAMVideoProcAmp;
+                if (pCameraControl != null)
+                {
+                    if (AllProperties.countSelected(dev) > 0)
+                    {
+                        SelectedProperties gb = new SelectedProperties(dev);
+                        tl.Controls.Add(gb);
                     }
                 }
             }
-
+            AllPage.Controls.Add(tl);
         }
     }
 }

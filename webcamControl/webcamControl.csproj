@@ -81,6 +81,12 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Form4.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Form4.Designer.cs">
+      <DependentUpon>Form4.cs</DependentUpon>
+    </Compile>
     <Compile Include="IniFile.cs" />
     <Compile Include="Form1.cs">
       <SubType>Form</SubType>
@@ -102,6 +108,30 @@
     </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="PropertyControl.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="PropertyControl.Designer.cs">
+      <DependentUpon>PropertyControl.cs</DependentUpon>
+    </Compile>
+    <Compile Include="PropertyControlSave.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="PropertyControlSave.Designer.cs">
+      <DependentUpon>PropertyControlSave.cs</DependentUpon>
+    </Compile>
+    <Compile Include="AllProperties.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="AllProperties.Designer.cs">
+      <DependentUpon>AllProperties.cs</DependentUpon>
+    </Compile>
+    <Compile Include="SelectedProperties.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="SelectedProperties.Designer.cs">
+      <DependentUpon>SelectedProperties.cs</DependentUpon>
+    </Compile>
     <Compile Include="webcam.cs">
       <SubType>UserControl</SubType>
     </Compile>
@@ -117,6 +147,9 @@
     <EmbeddedResource Include="Form3.resx">
       <DependentUpon>Form3.cs</DependentUpon>
     </EmbeddedResource>
+    <EmbeddedResource Include="Form4.resx">
+      <DependentUpon>Form4.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
@@ -127,6 +160,18 @@
       <DependentUpon>Resources.resx</DependentUpon>
       <DesignTime>True</DesignTime>
     </Compile>
+    <EmbeddedResource Include="PropertyControl.resx">
+      <DependentUpon>PropertyControl.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="PropertyControlSave.resx">
+      <DependentUpon>PropertyControlSave.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="AllProperties.resx">
+      <DependentUpon>AllProperties.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="SelectedProperties.resx">
+      <DependentUpon>SelectedProperties.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="webcam.resx">
       <DependentUpon>webcam.cs</DependentUpon>
     </EmbeddedResource>

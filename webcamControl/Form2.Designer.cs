@@ -35,13 +35,13 @@
             // 
             // AllPage
             // 
+            this.AllPage.AutoScroll = true;
             this.AllPage.Location = new System.Drawing.Point(4, 22);
             this.AllPage.Name = "AllPage";
             this.AllPage.Padding = new System.Windows.Forms.Padding(3);
             this.AllPage.Size = new System.Drawing.Size(350, 546);
             this.AllPage.TabIndex = 1;
             this.AllPage.Text = "All";
-            this.AllPage.UseVisualStyleBackColor = true;
             // 
             // tabControl
             // 
@@ -56,6 +56,8 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.AutoSize = true;
+            this.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
             this.ClientSize = new System.Drawing.Size(357, 569);
             this.Controls.Add(this.tabControl);
             this.Name = "Form2";

@@ -316,11 +316,13 @@ namespace webcamControl
                 if (device != null)
                 {
                     device.ReadReport(OnReport);
-                    mulTimer = new System.Timers.Timer();
-                    mulTimer.Interval = 300;
+                    mulTimer = new System.Timers.Timer
+                    {
+                        Interval = 300,
+                        AutoReset = true,
+                        Enabled = true,
+                    };
                     mulTimer.Elapsed += OnTimedEvent;
-                    mulTimer.AutoReset = true;
-                    mulTimer.Enabled = true;
                 }
             }
         }
