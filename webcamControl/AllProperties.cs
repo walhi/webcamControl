@@ -26,12 +26,12 @@ namespace webcamControl
         {
             InitializeComponent();
             webcam = dev;
-            object camDevice;
             Guid iid = typeof(IBaseFilter).GUID;
-            webcam.Mon.BindToObject(null, null, ref iid, out camDevice);
+            webcam.Mon.BindToObject(null, null, ref iid, out object camDevice);
             IBaseFilter camFilter = camDevice as IBaseFilter;
             IAMCameraControl pCameraControl = camFilter as IAMCameraControl;
             IAMVideoProcAmp pVideoProcAmp = camFilter as IAMVideoProcAmp;
+
             if (pCameraControl != null)
             {
                 TableLayoutPanel tl = new TableLayoutPanel
@@ -39,7 +39,8 @@ namespace webcamControl
                     Name = "TableLayout",
                     AutoSize = true,
                     AutoSizeMode = AutoSizeMode.GrowAndShrink,
-                    //Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
+                    //Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom,
+                    Dock = DockStyle.Top,
                     Location = new Point(this.Padding.Left, this.Padding.Top)
                 };
 
@@ -71,7 +72,8 @@ namespace webcamControl
                     Name = "Actions",
                     AutoSize = true,
                     Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
-                    AutoSizeMode = AutoSizeMode.GrowOnly,
+                    AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                    Dock = DockStyle.Top,
                     Location = new Point(this.Padding.Left, this.Padding.Top),
                     ColumnCount = 2,
                 };
@@ -127,7 +129,7 @@ namespace webcamControl
 
                 ComboBox hidDevices = new ComboBox
                 {
-                    Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
+                    Dock = DockStyle.Top,
                 };
                 string hidPath = INI.ReadINI(webcam.DevicePath, "HID");
                 // TODO: добавить вариант none
@@ -150,8 +152,7 @@ namespace webcamControl
 
                 Button SaveButton = new Button
                 {
-                    AutoSize = true,
-                    Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
+                    Dock = DockStyle.Top,
                     Text = "Save settings"
                 };
                 SaveButton.Click += new EventHandler(SaveSetting);

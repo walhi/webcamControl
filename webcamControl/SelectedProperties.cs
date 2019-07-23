@@ -39,13 +39,19 @@ namespace webcamControl
             IBaseFilter camFilter = camDevice as IBaseFilter;
             IAMCameraControl pCameraControl = camFilter as IAMCameraControl;
             IAMVideoProcAmp pVideoProcAmp = camFilter as IAMVideoProcAmp;
+            Anchor = AnchorStyles.Left | AnchorStyles.Right;
+            Padding = new Padding(0);
             if (pCameraControl != null)
             {
                 GroupBox gb = new GroupBox
                 {
+                    Name = "gb",
                     AutoSize = true,
                     AutoSizeMode = AutoSizeMode.GrowAndShrink,
-                    Text = webcam.Name
+                    Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Top,
+                    Dock = DockStyle.Top,
+                    Text = webcam.Name,
+                    Margin = new Padding(0)
                 };
 
                 TableLayoutPanel tl = new TableLayoutPanel
@@ -53,7 +59,8 @@ namespace webcamControl
                     Name = "TableLayout",
                     AutoSize = true,
                     AutoSizeMode = AutoSizeMode.GrowAndShrink,
-                    Location = new Point(gb.Padding.Left, gb.Padding.Top + 20)
+                    Location = new Point(gb.Padding.Left, gb.Padding.Top + 20),
+                    Dock = DockStyle.Top,
                 };
 
                 foreach (var prop in Enum.GetValues(typeof(CameraControlProperty)))
@@ -69,6 +76,7 @@ namespace webcamControl
                             pc.SetFlagUSB("True".Equals(INI.ReadINI(dev.DevicePath, "USB_" + prop.ToString())));
                         //gb.Controls.Add(pc);
                         tl.Controls.Add(pc);
+                        pc.Dock = DockStyle.Top;
                     }
                 }
                 foreach (var prop in Enum.GetValues(typeof(VideoProcAmpProperty)))
@@ -84,6 +92,7 @@ namespace webcamControl
                             pc.SetFlagUSB("True".Equals(INI.ReadINI(dev.DevicePath, "USB_" + prop.ToString())));
                         //gb.Controls.Add(pc);
                         tl.Controls.Add(pc);
+                        pc.Dock = DockStyle.Top;
                     }
                 }
 
@@ -111,6 +120,7 @@ namespace webcamControl
                     };
                     mulTimer.Elapsed += OnTimedEvent;
                     hid.ReadReport(OnReport);
+                    //hid.Removed += OnHIDDisconnect;
 
                     string Button1PropName = INI.ReadINI(dev.DevicePath, "BUTTON1");
                     string Button2PropName = INI.ReadINI(dev.DevicePath, "BUTTON2");
@@ -141,6 +151,18 @@ namespace webcamControl
         private void OnTimedEvent(Object source, System.Timers.ElapsedEventArgs e)
         {
             mul = 1;
+        }
+
+        private void OnHIDDisconnect()
+        {
+            Debug.WriteLine("Disconnect");
+            foreach (Control item in Controls["gb"].Controls["TableLayout"].Controls)
+            {
+                if (item is PropertyControl)
+                {
+                    ((PropertyControl)item).SelectItem(false);
+                }
+            }
         }
 
         private void OnReport(HidReport report)

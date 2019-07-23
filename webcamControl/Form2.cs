@@ -22,25 +22,27 @@ namespace webcamControl
 
             foreach (DsDevice dev in capDev)
             {
-                TabPage tabPage = new TabPage();
-                tabPage.Text = dev.Name;
+                TabPage tabPage = new TabPage
+                {
+                    // TODO: Возможность переименовать камеру
+                    Text = dev.Name
+                };
                 object camDevice;
                 Guid iid = typeof(IBaseFilter).GUID;
 
                 dev.Mon.BindToObject(null, null, ref iid, out camDevice);
                 IBaseFilter camFilter = camDevice as IBaseFilter;
-                IAMCameraControl pCameraControl = camFilter as IAMCameraControl;
-                IAMVideoProcAmp pVideoProcAmp = camFilter as IAMVideoProcAmp;
-                if (pCameraControl != null)
+                if (camFilter is IAMCameraControl pCameraControl)
                 {
                     AllProperties ggg = new AllProperties(dev);
-                    ggg.AutoSize = true;
-                    ggg.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
                     tabPage.Controls.Add(ggg);
                     tabControl.Controls.Add(tabPage);
+                    ggg.Dock = DockStyle.Top;
                 }
             }
             InitSelected();
+
+            tabControl.Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Top | AnchorStyles.Bottom;
         }
 
         public void InitSelected()
@@ -52,7 +54,8 @@ namespace webcamControl
             TableLayoutPanel tl = new TableLayoutPanel
             {
                 AutoSize = true,
-                AutoSizeMode = AutoSizeMode.GrowAndShrink
+                AutoSizeMode = AutoSizeMode.GrowOnly,
+                Dock = DockStyle.Top
             };
 
             foreach (DsDevice dev in capDev)
@@ -62,14 +65,14 @@ namespace webcamControl
 
                 dev.Mon.BindToObject(null, null, ref iid, out camDevice);
                 IBaseFilter camFilter = camDevice as IBaseFilter;
-                IAMCameraControl pCameraControl = camFilter as IAMCameraControl;
-                IAMVideoProcAmp pVideoProcAmp = camFilter as IAMVideoProcAmp;
-                if (pCameraControl != null)
+                if (camFilter is IAMCameraControl pCameraControl)
                 {
                     if (AllProperties.countSelected(dev) > 0)
                     {
                         SelectedProperties gb = new SelectedProperties(dev);
                         tl.Controls.Add(gb);
+                        gb.Dock = DockStyle.Top;
+                        //gb.Width = 
                     }
                 }
             }

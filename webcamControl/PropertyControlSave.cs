@@ -70,6 +70,7 @@ namespace webcamControl
                 //trackBar.Value = pMax - pValue + pMin;
                 trackBar.MouseDown += new MouseEventHandler(resetDefault);
             }
+            Dock = DockStyle.Top;
         }
 
         public void SelectItem(bool state)
