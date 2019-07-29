@@ -36,7 +36,7 @@
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.AutoSize = true;
             this.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
-            this.Name = "SelectedProperties";
+            this.Name = "AllProperties";
             this.Size = new System.Drawing.Size(0, 0);
             this.ResumeLayout(false);
 

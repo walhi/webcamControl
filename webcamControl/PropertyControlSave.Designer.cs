@@ -31,8 +31,7 @@
             this.label = new System.Windows.Forms.Label();
             this.cbAuto = new System.Windows.Forms.CheckBox();
             this.trackBar = new System.Windows.Forms.TrackBar();
-            this.cbAll = new System.Windows.Forms.CheckBox();
-            this.cbUSB = new System.Windows.Forms.CheckBox();
+            this.cbFavorite = new System.Windows.Forms.CheckBox();
             this.tableLayoutPanel1 = new System.Windows.Forms.TableLayoutPanel();
             ((System.ComponentModel.ISupportInitialize)(this.trackBar)).BeginInit();
             this.tableLayoutPanel1.SuspendLayout();
@@ -69,41 +68,32 @@
             this.trackBar.Enabled = false;
             this.trackBar.Location = new System.Drawing.Point(118, 3);
             this.trackBar.Name = "trackBar";
-            this.trackBar.Size = new System.Drawing.Size(142, 13);
+            this.trackBar.Size = new System.Drawing.Size(162, 13);
             this.trackBar.TabIndex = 15;
             this.trackBar.TickStyle = System.Windows.Forms.TickStyle.None;
             this.trackBar.Scroll += new System.EventHandler(this.trackBar_Scroll);
             // 
-            // cbAll
+            // cbFavorite
             // 
-            this.cbAll.AutoSize = true;
-            this.cbAll.Location = new System.Drawing.Point(266, 3);
-            this.cbAll.Name = "cbAll";
-            this.cbAll.Size = new System.Drawing.Size(14, 13);
-            this.cbAll.TabIndex = 18;
-            this.cbAll.UseVisualStyleBackColor = true;
-            // 
-            // cbUSB
-            // 
-            this.cbUSB.AutoSize = true;
-            this.cbUSB.Location = new System.Drawing.Point(286, 3);
-            this.cbUSB.Name = "cbUSB";
-            this.cbUSB.Size = new System.Drawing.Size(14, 13);
-            this.cbUSB.TabIndex = 19;
-            this.cbUSB.UseVisualStyleBackColor = true;
+            this.cbFavorite.AutoSize = true;
+            this.cbFavorite.Location = new System.Drawing.Point(286, 3);
+            this.cbFavorite.Name = "cbFavorite";
+            this.cbFavorite.Size = new System.Drawing.Size(14, 13);
+            this.cbFavorite.TabIndex = 18;
+            this.cbFavorite.UseVisualStyleBackColor = true;
+            this.cbFavorite.CheckedChanged += new System.EventHandler(this.cbFavorite_CheckedChanged);
             // 
             // tableLayoutPanel1
             // 
-            this.tableLayoutPanel1.ColumnCount = 5;
+            this.tableLayoutPanel1.ColumnCount = 4;
             this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 95F));
             this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 20F));
             this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
             this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 20F));
             this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 20F));
             this.tableLayoutPanel1.Controls.Add(this.label, 0, 0);
-            this.tableLayoutPanel1.Controls.Add(this.cbUSB, 4, 0);
             this.tableLayoutPanel1.Controls.Add(this.cbAuto, 1, 0);
-            this.tableLayoutPanel1.Controls.Add(this.cbAll, 3, 0);
+            this.tableLayoutPanel1.Controls.Add(this.cbFavorite, 3, 0);
             this.tableLayoutPanel1.Controls.Add(this.trackBar, 2, 0);
             this.tableLayoutPanel1.Cursor = System.Windows.Forms.Cursors.Default;
             this.tableLayoutPanel1.Dock = System.Windows.Forms.DockStyle.Top;
@@ -133,8 +123,7 @@
         private System.Windows.Forms.Label label;
         private System.Windows.Forms.CheckBox cbAuto;
         private System.Windows.Forms.TrackBar trackBar;
-        private System.Windows.Forms.CheckBox cbAll;
-        private System.Windows.Forms.CheckBox cbUSB;
+        private System.Windows.Forms.CheckBox cbFavorite;
         private System.Windows.Forms.TableLayoutPanel tableLayoutPanel1;
     }
 }

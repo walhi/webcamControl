@@ -15,13 +15,34 @@ namespace webcamControl
 {
     public partial class AllProperties : UserControl
     {
+
+
+        public EventHandler PropertiesValueUpdate;
+        public EventHandler ConfigurationUpdate;
+        public EventHandler CreateSelectedProperties;
+        public EventHandler DeleteSelectedProperties;
+
+        public SelectedProperties SelectedPropertiesVar;
+
         private const int VendorId = 0x0483;
         private const int ProductId = 0x5750;
 
         private static IniFile INI = new IniFile("config.ini");
+
         private DsDevice webcam;
+        private string webcamName;
+
+        private const string NotUsedText = "None";
         private HidDevice hid;
-        public int selected = 0;
+        private ComboBox hidDevices;
+
+        private TableLayoutPanel main;
+        private ComboBox PropertyHIDButton1;
+        private ComboBox PropertyHIDButton2;
+        private TextBox webcamNameEdit;
+
+        public int CountFavorites = 0;
+
         public AllProperties(DsDevice dev)
         {
             InitializeComponent();
@@ -31,144 +52,224 @@ namespace webcamControl
             IBaseFilter camFilter = camDevice as IBaseFilter;
             IAMCameraControl pCameraControl = camFilter as IAMCameraControl;
             IAMVideoProcAmp pVideoProcAmp = camFilter as IAMVideoProcAmp;
+            webcamName = INI.KeyExists("Name", webcam.DevicePath) ? INI.ReadINI(webcam.DevicePath, "Name") : webcam.Name;
 
-            if (pCameraControl != null)
+
+            main = new TableLayoutPanel
             {
-                TableLayoutPanel tl = new TableLayoutPanel
-                {
-                    Name = "TableLayout",
-                    AutoSize = true,
-                    AutoSizeMode = AutoSizeMode.GrowAndShrink,
-                    //Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom,
-                    Dock = DockStyle.Top,
-                    Location = new Point(this.Padding.Left, this.Padding.Top)
-                };
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                Dock = DockStyle.Top,
+                Location = new Point(this.Padding.Left, this.Padding.Top)
+            };
+            Controls.Add(main);
 
-                foreach (var prop in Enum.GetValues(typeof(CameraControlProperty)))
+            // Блок с ползунками
+            foreach (var prop in Enum.GetValues(typeof(CameraControlProperty)))
+                main.Controls.Add(new PropertyControlSave(pCameraControl, prop));
+            foreach (var prop in Enum.GetValues(typeof(VideoProcAmpProperty)))
+                main.Controls.Add(new PropertyControlSave(pVideoProcAmp, prop));
+            foreach (PropertyControlSave pc in main.Controls)
+            {
+                if ("True".Equals(INI.ReadINI(webcam.DevicePath, pc.ToString())))
                 {
-                    PropertyControlSave pc = new PropertyControlSave(pCameraControl, prop);
-                    bool sel = "True".Equals(INI.ReadINI(webcam.DevicePath, "All_" + prop.ToString()));
-                    bool usb = "True".Equals(INI.ReadINI(webcam.DevicePath, "USB_" + prop.ToString()));
-                    if (usb) sel = true;
-                    if (sel) selected++;
-                    pc.SetFlagAll(sel);
-                    pc.SetFlagUSB(usb);
-                    tl.Controls.Add(pc);
+                    pc.SetFavorite(true);
+                    CountFavorites++;
                 }
-                foreach (var prop in Enum.GetValues(typeof(VideoProcAmpProperty)))
-                {
-                    PropertyControlSave pc = new PropertyControlSave(pVideoProcAmp, prop);
-                    bool sel = "True".Equals(INI.ReadINI(webcam.DevicePath, "All_" + prop.ToString()));
-                    bool usb = "True".Equals(INI.ReadINI(webcam.DevicePath, "USB_" + prop.ToString()));
-                    if (usb) sel = true;
-                    if (sel) selected++;
-                    pc.SetFlagAll(sel);
-                    pc.SetFlagUSB(usb);
-                    tl.Controls.Add(pc);
-                }
-
-                TableLayoutPanel tlActions = new TableLayoutPanel
-                {
-                    Name = "Actions",
-                    AutoSize = true,
-                    Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
-                    AutoSizeMode = AutoSizeMode.GrowAndShrink,
-                    Dock = DockStyle.Top,
-                    Location = new Point(this.Padding.Left, this.Padding.Top),
-                    ColumnCount = 2,
-                };
-                tlActions.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
-                tlActions.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
-
-                /*
-                Button FocusPreset1 = new Button
-                {
-                    AutoSize = true,
-                    Anchor = AnchorStyles.Top | AnchorStyles.Left |AnchorStyles.Right,
-                    Text = "Save focus preset 1"
-                };
-                Button FocusPreset2 = new Button
-                {
-                    AutoSize = true,
-                    Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
-                    Text = "Save focus preset 2"
-                };
-                tlActions.Controls.Add(FocusPreset1);
-                tlActions.Controls.Add(FocusPreset2);
-                */
-                ComboBox ButtonProp1 = new ComboBox
-                {
-                    Name = "ButtonProp1",
-                    Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
-                };
-                ComboBox ButtonProp2 = new ComboBox
-                {
-                    Name = "ButtonProp2",
-                    Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
-                };
-                string button1 = INI.ReadINI(webcam.DevicePath, "BUTTON1");
-                string button2 = INI.ReadINI(webcam.DevicePath, "BUTTON2");
-                INI.ReadINI(webcam.DevicePath, "BUTTON1");
-                foreach (var prop in Enum.GetValues(typeof(CameraControlProperty)))
-                {
-                    int i = ButtonProp1.Items.Add(prop.ToString());
-                    if (button1.Equals(prop.ToString())) ButtonProp1.SelectedIndex = i;
-                    i = ButtonProp2.Items.Add(prop.ToString());
-                    if (button2.Equals(prop.ToString())) ButtonProp2.SelectedIndex = i;
-                }
-                foreach (var prop in Enum.GetValues(typeof(VideoProcAmpProperty)))
-                {
-                    int i = ButtonProp1.Items.Add(prop.ToString());
-                    if (button1.Equals(prop.ToString())) ButtonProp1.SelectedIndex = i;
-                    i = ButtonProp2.Items.Add(prop.ToString());
-                    if (button2.Equals(prop.ToString())) ButtonProp2.SelectedIndex = i;
-                }
-                tlActions.Controls.Add(ButtonProp1);
-                tlActions.Controls.Add(ButtonProp2);
-                tl.Controls.Add(tlActions);
-
-                ComboBox hidDevices = new ComboBox
-                {
-                    Dock = DockStyle.Top,
-                };
-                string hidPath = INI.ReadINI(webcam.DevicePath, "HID");
-                // TODO: добавить вариант none
-                foreach (HidDevice x in HidDevices.Enumerate(VendorId, ProductId))
-                {
-                    x.OpenDevice();
-                    x.ReadSerialNumber(out byte[] sb_buf);
-                    String sn = Encoding.Unicode.GetString(sb_buf);
-                    int i = hidDevices.Items.Add(sn);
-                    // TODO
-                    if (hidPath.Equals(x.DevicePath))
-                    {
-                        hid = x;
-                        hidDevices.SelectedIndex = i;
-                    }
-                    x.CloseDevice();
-                }
-                hidDevices.SelectedIndexChanged += new System.EventHandler(this.HID_SelectedIndexChanged);
-                tl.Controls.Add(hidDevices);
-
-                Button SaveButton = new Button
-                {
-                    Dock = DockStyle.Top,
-                    Text = "Save settings"
-                };
-                SaveButton.Click += new EventHandler(SaveSetting);
-                tl.Controls.Add(SaveButton);
-
-
-                Controls.Add(tl);
-
+                pc.ValueUpdate += new EventHandler(PropertyValueUpdate);
+                pc.FavoriteUpdate += new EventHandler(FavoritesUpdate);
             }
+
+            // Действия на кнопки (аппаратные)
+            TableLayoutPanel tlActions = new TableLayoutPanel
+            {
+                AutoSize = true,
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                Dock = DockStyle.Top,
+                Location = new Point(this.Padding.Left, this.Padding.Top),
+                ColumnCount = 2,
+            };
+            tlActions.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+            tlActions.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+
+            PropertyHIDButton1 = new ComboBox
+            {
+                Name = "ButtonProp1",
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
+                DropDownStyle = ComboBoxStyle.DropDownList
+            };
+            PropertyHIDButton2 = new ComboBox
+            {
+                Name = "ButtonProp2",
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
+                DropDownStyle = ComboBoxStyle.DropDownList
+            };
+            UpdatePropertyList();
+            tlActions.Controls.Add(PropertyHIDButton1);
+            tlActions.Controls.Add(PropertyHIDButton2);
+            main.Controls.Add(tlActions);
+
+            // Выбор HID устройства
+            hidDevices = new ComboBox
+            {
+                Dock = DockStyle.Top,
+                DropDownStyle = ComboBoxStyle.DropDownList
+            };
+            HIDList();
+            Globals._USBControl.HIDDisconnected += new EventHandler(HIDUpdateHandler);
+            Globals._USBControl.HIDConnected += new EventHandler(HIDUpdateHandler);
+            main.Controls.Add(hidDevices);
+
+            // Имя устройства
+            webcamNameEdit = new TextBox
+            {
+                Dock = DockStyle.Top,
+                Text = webcamName
+            };
+            main.Controls.Add(webcamNameEdit);
+
+            // Кнопка сохранения
+            Button SaveButton = new Button
+            {
+                Dock = DockStyle.Top,
+                Text = "Save settings"
+            };
+            SaveButton.Click += new EventHandler(SaveSetting);
+            main.Controls.Add(SaveButton);
+
+
+            Globals._USBControl.DShowDisconnected += new EventHandler(WebcamDisconnected);
+
+        }
+
+        private void WebcamDisconnected(object sender, EventArgs e)
+        {
+            Debug.WriteLine("WebcamDisconnected" + sender.GetType().ToString());
+            if (!(sender is DsDevice dev)) return;
+            Debug.WriteLine("t1");
+            if (dev.DevicePath.Equals(webcam.DevicePath))
+            {
+                Debug.WriteLine("t2");
+                this.BackColor = Color.Red;
+                //Globals._USBControl.DShowConnected += new EventHandler(HIDUpdateHandler);
+            }
+        }
+
+        private void WebcamConnected(object sender, EventArgs e)
+        {
+            Debug.WriteLine("WebcamDisconnected" + sender.GetType().ToString());
+            if (!(sender is DsDevice dev)) return;
+            Debug.WriteLine("t1");
+            if (dev.DevicePath.Equals(webcam.DevicePath))
+            {
+                Debug.WriteLine("t2");
+                this.BackColor = Color.Red;
+                //Globals._USBControl.DShowConnected += new EventHandler(HIDUpdateHandler);
+            }
+        }
+
+        private void PropertyValueUpdate(object sender, EventArgs e)
+        {
+            PropertiesValueUpdate?.Invoke(sender, e);
+        }
+
+        private void FavoritesUpdate(object sender, EventArgs e)
+        {
+            UpdatePropertyList();
+        }
+
+        private void UpdatePropertyList()
+        {
+            // TODO none
+            string item1, item2;
+            if (PropertyHIDButton1.Items.Count != 0)
+            {
+                item1 = PropertyHIDButton1.Items[PropertyHIDButton1.SelectedIndex].ToString();
+                item2 = PropertyHIDButton2.Items[PropertyHIDButton2.SelectedIndex].ToString();
+            }
+            else
+            {
+                item1 = INI.ReadINI(webcam.DevicePath, "PropertyHIDButton1");
+                item2 = INI.ReadINI(webcam.DevicePath, "PropertyHIDButton2");
+            }
+            PropertyHIDButton1.Items.Clear();
+            PropertyHIDButton2.Items.Clear();
+            PropertyHIDButton1.Items.Add(NotUsedText);
+            PropertyHIDButton2.Items.Add(NotUsedText);
+            PropertyHIDButton1.SelectedIndex = 0;
+            PropertyHIDButton2.SelectedIndex = 0;
+
+
+            foreach (Control item in main.Controls)
+            {
+                if (item is PropertyControlSave prop)
+                {
+                    if (prop.GetFavorite())
+                    {
+                        int i = PropertyHIDButton1.Items.Add(prop.ToString());
+                        if (item1.Equals(prop.ToString())) PropertyHIDButton1.SelectedIndex = i;
+                        i = PropertyHIDButton2.Items.Add(prop.ToString());
+                        if (item2.Equals(prop.ToString())) PropertyHIDButton2.SelectedIndex = i;
+                    }
+
+                }
+            }
+        }
+
+        private void HIDUpdateHandler(object sender, EventArgs e)
+        {
+            if (this.InvokeRequired)
+            {
+                this.Invoke((MethodInvoker)(() =>
+                {
+                    HIDUpdateHandlerImpl();
+                }
+                ));
+            }
+            else
+            {
+                HIDUpdateHandlerImpl();
+            }
+        }
+
+        private void HIDUpdateHandlerImpl()
+        {
+            HIDList();
+        }
+
+        private void HIDList()
+        {
+            hidDevices.SelectedIndexChanged -= new EventHandler(this.HID_SelectedIndexChanged);
+            hidDevices.Items.Clear();
+            hidDevices.SelectedIndex = hidDevices.Items.Add(NotUsedText);
+            string hidPath = INI.ReadINI(webcam.DevicePath, "HID");
+            foreach (HidDevice x in HidDevices.Enumerate(VendorId, ProductId))
+            {
+                x.OpenDevice();
+                x.ReadSerialNumber(out byte[] sb_buf);
+                String sn = Encoding.Unicode.GetString(sb_buf);
+                int i = hidDevices.Items.Add(sn);
+                if (hidPath.Equals(x.DevicePath))
+                {
+                    hid = x;
+                    hidDevices.SelectedIndex = i;
+                }
+                x.CloseDevice();
+            }
+            // На случай, если устройство было выбрано ранее, но сейчас не подключено.
+            if (hid == null && hidPath.Length > 0)
+            {
+                hidDevices.SelectedIndex = hidDevices.Items.Add(hidPath + " (disconnected)");
+            }
+            hidDevices.SelectedIndexChanged += new System.EventHandler(this.HID_SelectedIndexChanged);
         }
 
         private void HID_SelectedIndexChanged(object sender, EventArgs e)
         {
             string selected = ((ComboBox)sender).SelectedItem.ToString();
+            if (selected.Equals(NotUsedText)) hid = null;
 
-            Debug.WriteLine(selected);
 
             HidReport report = new HidReport(1);
             byte[] data = new byte[1];
@@ -179,16 +280,13 @@ namespace webcamControl
                 x.OpenDevice();
                 x.ReadSerialNumber(out byte[] sb_buf);
                 String sn = Encoding.Unicode.GetString(sb_buf);
-                Debug.WriteLine(sn);
                 if (selected.Equals(sn))
                 {
-                    Debug.WriteLine("true");
                     hid = x;
                     data[0] = 7;
                 }
                 else
                 {
-                    Debug.WriteLine("false");
                     data[0] = 0;
                 }
                 report.Data = data;
@@ -199,20 +297,19 @@ namespace webcamControl
 
         private void SaveSetting(object sender, EventArgs e)
         {
-            foreach (Control item in Controls["TableLayout"].Controls)
+            int count = 0;
+            foreach (Control item in main.Controls)
             {
                 if (item is PropertyControlSave)
                 {
-                    INI.Write(webcam.DevicePath, "All_" + ((PropertyControlSave)item).GetPropertyName(), ((PropertyControlSave)item).GetFlagAll().ToString());
-                    INI.Write(webcam.DevicePath, "USB_" + ((PropertyControlSave)item).GetPropertyName(), ((PropertyControlSave)item).GetFlagUSB().ToString());
+                    count += ((PropertyControlSave)item).GetFavorite() ? 1 : 0;
+                    INI.Write(webcam.DevicePath, ((PropertyControlSave)item).ToString(), ((PropertyControlSave)item).GetFavorite().ToString());
                 }
             }
 
 
-            ComboBox cb = (ComboBox)Controls["TableLayout"].Controls["Actions"].Controls["ButtonProp1"];
-            INI.Write(webcam.DevicePath, "BUTTON1", cb.Items[cb.SelectedIndex].ToString());
-            cb = (ComboBox)Controls["TableLayout"].Controls["Actions"].Controls["ButtonProp2"];
-            INI.Write(webcam.DevicePath, "BUTTON2", cb.Items[cb.SelectedIndex].ToString());
+            INI.Write(webcam.DevicePath, "PropertyHIDButton1", PropertyHIDButton1.Items[PropertyHIDButton1.SelectedIndex].ToString());
+            INI.Write(webcam.DevicePath, "PropertyHIDButton2", PropertyHIDButton2.Items[PropertyHIDButton2.SelectedIndex].ToString());
 
             if (hid != null)
             {
@@ -228,35 +325,50 @@ namespace webcamControl
                 INI.Write(webcam.DevicePath, "HID", hid.DevicePath);
                 hid.CloseDevice();
             }
-            else
-                INI.DeleteKey("HID", webcam.DevicePath);
 
-            // обновить страницу
-            if (Application.OpenForms["Form2"] != null)
-            {
-                (Application.OpenForms["Form2"] as Form2).InitSelected();
-            }
+            INI.Write(webcam.DevicePath, "Name", webcamNameEdit.Text);
+            ((TabPage)Parent).Text = webcamName = webcamNameEdit.Text;
+            
+
+
+            ConfigurationUpdate?.Invoke(this, new EventArgs());
+            if (CountFavorites == 0 && count > 0)
+                CreateSelectedProperties?.Invoke(this, new EventArgs());
+            if (CountFavorites > 0 && count == 0)
+                DeleteSelectedProperties?.Invoke(this, new EventArgs());
+
+            CountFavorites = count;
         }
 
-        public static int countSelected(DsDevice dev)
+        public DsDevice GetDevice()
         {
-            int count = 0;
+            return webcam;
+        }
 
-            foreach (var prop in Enum.GetValues(typeof(CameraControlProperty)))
+        public string GetWebcamName()
+        {
+            return webcamName;
+        }
+
+        public void AddPropertyUpdateHandler()
+        {
+            SelectedPropertiesVar.PropertiesValueUpdate += new EventHandler(ExternPropertyUpdate);
+        }
+
+        private void ExternPropertyUpdate(object sender, EventArgs e)
+        {
+            Debug.WriteLine("PropertyUpdate");
+            PropertyControl pc = (PropertyControl)sender;
+            foreach (Control item in main.Controls)
             {
-                bool sel = "True".Equals(INI.ReadINI(dev.DevicePath, "All_" + prop.ToString()));
-                bool usb = "True".Equals(INI.ReadINI(dev.DevicePath, "USB_" + prop.ToString()));
-                if (usb) sel = true;
-                if (sel) count++;
+                if (item is PropertyControlSave)
+                {
+                    if (pc.ToString().Equals(((PropertyControlSave)item).ToString()))
+                    {
+                        ((PropertyControlSave)item).UpdateValue(pc);
+                    }
+                }
             }
-            foreach (var prop in Enum.GetValues(typeof(VideoProcAmpProperty)))
-            {
-                bool sel = "True".Equals(INI.ReadINI(dev.DevicePath, "All_" + prop.ToString()));
-                bool usb = "True".Equals(INI.ReadINI(dev.DevicePath, "USB_" + prop.ToString()));
-                if (usb) sel = true;
-                if (sel) count++;
-            }
-            return count;
         }
     }
 }

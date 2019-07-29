@@ -16,6 +16,8 @@ namespace webcamControl
         private object Property;
         private object Control;
         private int defaultValue;
+        public EventHandler FavoriteUpdate;
+        public EventHandler ValueUpdate;
 
         public PropertyControlSave(object ctrl, object prop)
         {
@@ -32,11 +34,11 @@ namespace webcamControl
                 CameraControlFlags cameraFlags;
                 ((IAMCameraControl)Control).GetRange((CameraControlProperty)prop, out pMin, out pMax, out pSteppingDelta, out defaultValue, out cameraFlags);
                 none = cameraFlags == CameraControlFlags.None;
-                autoSupport = cameraFlags == CameraControlFlags.Auto;
-                manualSupport = cameraFlags == CameraControlFlags.Manual;
+                autoSupport = (cameraFlags & CameraControlFlags.Auto) == CameraControlFlags.Auto;
+                manualSupport = (cameraFlags & CameraControlFlags.Manual) == CameraControlFlags.Manual;
                 ((IAMCameraControl)Control).Get((CameraControlProperty)prop, out pValue, out cameraFlags);
-                auto = cameraFlags == CameraControlFlags.Auto;
-                manual = cameraFlags == CameraControlFlags.Manual;
+                auto = (cameraFlags & CameraControlFlags.Auto) == CameraControlFlags.Auto;
+                manual = (cameraFlags & CameraControlFlags.Manual) == CameraControlFlags.Manual;
             }
             else
             {
@@ -45,24 +47,23 @@ namespace webcamControl
                 VideoProcAmpFlags cameraFlags;
                 ((IAMVideoProcAmp)Control).GetRange((VideoProcAmpProperty)prop, out pMin, out pMax, out pSteppingDelta, out defaultValue, out cameraFlags);
                 none = cameraFlags == VideoProcAmpFlags.None;
-                autoSupport = cameraFlags == VideoProcAmpFlags.Auto;
-                manualSupport = cameraFlags == VideoProcAmpFlags.Manual;
+                autoSupport = (cameraFlags & VideoProcAmpFlags.Auto) == VideoProcAmpFlags.Auto;
+                manualSupport = (cameraFlags & VideoProcAmpFlags.Manual) == VideoProcAmpFlags.Manual;
                 ((IAMVideoProcAmp)Control).Get((VideoProcAmpProperty)prop, out pValue, out cameraFlags);
-                auto = cameraFlags == VideoProcAmpFlags.Auto;
-                manual = cameraFlags == VideoProcAmpFlags.Manual;
+                auto = (cameraFlags & VideoProcAmpFlags.Auto) == VideoProcAmpFlags.Auto;
+                manual = (cameraFlags & VideoProcAmpFlags.Manual) == VideoProcAmpFlags.Manual;
             }
 
 
             label.Enabled = !none;
             cbAuto.Enabled = !none;
-            cbAll.Enabled = !none;
-            cbUSB.Enabled = !none;
+            cbFavorite.Enabled = !none;
             trackBar.Enabled = !none;
             if (!none)
             {
                 cbAuto.Checked = auto;
-                cbAuto.Enabled = !manualSupport;
-                trackBar.Enabled = manual;
+                cbAuto.Enabled = autoSupport;
+                trackBar.Enabled = auto?false:manual;
                 trackBar.Minimum = pMin;
                 trackBar.Maximum = pMax;
                 trackBar.TickFrequency = pSteppingDelta;
@@ -73,12 +74,7 @@ namespace webcamControl
             Dock = DockStyle.Top;
         }
 
-        public void SelectItem(bool state)
-        {
-            label.Font = new Font(label.Font, state?FontStyle.Bold:FontStyle.Regular);
-        }
-
-        public string GetPropertyName()
+        override public string ToString()
         {
             if (Object.ReferenceEquals(Property.GetType(), new CameraControlProperty().GetType()))
             {
@@ -90,27 +86,27 @@ namespace webcamControl
             }
         }
 
-        public void SetFlagAll(bool state)
+        public void SetFavorite(bool state)
         {
-            cbAll.Checked = state;
+            cbFavorite.Checked = state;
         }
 
-        public void SetFlagUSB(bool state)
+        public bool GetFavorite()
         {
-            cbUSB.Checked = state;
+            return cbFavorite.Checked;
         }
 
-        public bool GetFlagAll()
+        public bool GetAutoMode()
         {
-            return cbAll.Checked;
+            return cbAuto.Checked;
         }
 
-        public bool GetFlagUSB()
+        public int GetPropertyValue()
         {
-            return cbUSB.Checked;
+            return trackBar.Value;
         }
 
-        private void setValue(int newValue, bool auto)
+        private void SetValue(int newValue, bool auto)
         {
 
             if (Object.ReferenceEquals(Property.GetType(), new CameraControlProperty().GetType()))
@@ -127,7 +123,8 @@ namespace webcamControl
         private void trackBar_Scroll(object sender, EventArgs e)
         {
             int Value = trackBar.Value - trackBar.Value % trackBar.TickFrequency;
-            setValue(trackBar.Value, false);
+            SetValue(trackBar.Value, false);
+            ValueUpdate?.Invoke(this, new EventArgs());
         }
 
         private void cbAuto_CheckedChanged(object sender, EventArgs e)
@@ -136,20 +133,34 @@ namespace webcamControl
             if (cbAuto.Checked)
             {
                 // todo
-                setValue(trackBar.Minimum, false);
-                setValue(trackBar.Minimum, true);
+                SetValue(trackBar.Minimum, false);
+                SetValue(trackBar.Minimum, true);
             }
             else
             {
-                setValue(trackBar.Value, false);
+                SetValue(trackBar.Value, false);
             }
+            ValueUpdate?.Invoke(this, new EventArgs());
         }
 
         private void resetDefault(object sender, EventArgs e)
         {
             if (((MouseEventArgs)e).Button == MouseButtons.Left) return;
             trackBar.Value = defaultValue;
-            setValue(trackBar.Value, false);
+            SetValue(trackBar.Value, false);
+            ValueUpdate?.Invoke(this, new EventArgs());
+        }
+
+        private void cbFavorite_CheckedChanged(object sender, EventArgs e)
+        {
+            // raise the event
+            FavoriteUpdate?.Invoke(this, new EventArgs());
+        }
+
+        public void UpdateValue(PropertyControl pc)
+        {
+            trackBar.Value = pc.GetPropertyValue();
+            cbAuto.Checked = pc.GetAutoMode();
         }
     }
 }

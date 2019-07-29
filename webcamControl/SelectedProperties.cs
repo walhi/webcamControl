@@ -18,177 +18,255 @@ namespace webcamControl
         private const int VendorId = 0x0483;
         private const int ProductId = 0x5750;
 
+        public EventHandler PropertiesValueUpdate;
+        private AllProperties AllPropertiesVar;
+
+        private EventHandler HIDConnectEvent;
+        private EventHandler HIDDisconnectEvent;
+
+
         private IniFile INI = new IniFile("config.ini");
         private DsDevice webcam;
+        private IAMCameraControl pCameraControl;
+        private IAMVideoProcAmp pVideoProcAmp;
+        private string webcamName;
         private HidDevice hid;
 
         private System.Timers.Timer mulTimer;
-        private int mul = 1;
+        private int mul = 0;
         private bool oldDir = false;
-        private PropertyControl current;
-        private PropertyControl button1;
-        private PropertyControl button2;
+        private GroupBox gBox;
+        private TableLayoutPanel mainLayout;
+        private PropertyControl currentProperty;
+        private int currentIndex = 0;
+        private int PropertyHIDButton1Index;
+        private int PropertyHIDButton2Index;
 
-        public SelectedProperties(DsDevice dev)
+        public SelectedProperties(DsDevice dev, AllProperties all)
         {
             InitializeComponent();
+
             webcam = dev;
-            object camDevice;
-            Guid iid = typeof(IBaseFilter).GUID;
-            webcam.Mon.BindToObject(null, null, ref iid, out camDevice);
+            AllPropertiesVar = all;
+            HIDConnectEvent = new EventHandler(HIDConnected);
+            HIDDisconnectEvent = new EventHandler(HIDDisconnected);
+
+        Guid iid = typeof(IBaseFilter).GUID;
+            webcam.Mon.BindToObject(null, null, ref iid, out object camDevice);
             IBaseFilter camFilter = camDevice as IBaseFilter;
-            IAMCameraControl pCameraControl = camFilter as IAMCameraControl;
-            IAMVideoProcAmp pVideoProcAmp = camFilter as IAMVideoProcAmp;
+            pCameraControl = camFilter as IAMCameraControl;
+            pVideoProcAmp = camFilter as IAMVideoProcAmp;
+
+            webcamName = INI.KeyExists("Name", webcam.DevicePath) ? INI.ReadINI(webcam.DevicePath, "Name") : webcam.Name;
+
             Anchor = AnchorStyles.Left | AnchorStyles.Right;
             Padding = new Padding(0);
-            if (pCameraControl != null)
+            gBox = new GroupBox
             {
-                GroupBox gb = new GroupBox
-                {
-                    Name = "gb",
-                    AutoSize = true,
-                    AutoSizeMode = AutoSizeMode.GrowAndShrink,
-                    Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Top,
-                    Dock = DockStyle.Top,
-                    Text = webcam.Name,
-                    Margin = new Padding(0)
-                };
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Top,
+                Dock = DockStyle.Top,
+                Text = webcamName,
+                Margin = new Padding(0)
+            };
 
-                TableLayoutPanel tl = new TableLayoutPanel
-                {
-                    Name = "TableLayout",
-                    AutoSize = true,
-                    AutoSizeMode = AutoSizeMode.GrowAndShrink,
-                    Location = new Point(gb.Padding.Left, gb.Padding.Top + 20),
-                    Dock = DockStyle.Top,
-                };
+            mainLayout = new TableLayoutPanel
+            {
+                Name = "TableLayout",
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                Location = new Point(gBox.Padding.Left, gBox.Padding.Top + 20),
+                Dock = DockStyle.Top,
+            };
+            gBox.Controls.Add(mainLayout);
+            Controls.Add(gBox);
 
-                foreach (var prop in Enum.GetValues(typeof(CameraControlProperty)))
-                {
-                    string key = "All_" + prop.ToString();
-                    if (
-                        INI.KeyExists(key, dev.DevicePath) &&
-                        "True".Equals(INI.ReadINI(dev.DevicePath, key))
-                        )
-                    {
-                        PropertyControl pc = new PropertyControl(pCameraControl, prop);
-                        if (INI.KeyExists("USB_" + prop.ToString(), dev.DevicePath))
-                            pc.SetFlagUSB("True".Equals(INI.ReadINI(dev.DevicePath, "USB_" + prop.ToString())));
-                        //gb.Controls.Add(pc);
-                        tl.Controls.Add(pc);
-                        pc.Dock = DockStyle.Top;
-                    }
-                }
-                foreach (var prop in Enum.GetValues(typeof(VideoProcAmpProperty)))
-                {
-                    string key = "All_" + prop.ToString();
-                    if (
-                        INI.KeyExists(key, dev.DevicePath) &&
-                        "True".Equals(INI.ReadINI(dev.DevicePath, key))
-                        )
-                    {
-                        PropertyControl pc = new PropertyControl(pCameraControl, prop);
-                        if (INI.KeyExists("USB_" + prop.ToString(), dev.DevicePath))
-                            pc.SetFlagUSB("True".Equals(INI.ReadINI(dev.DevicePath, "USB_" + prop.ToString())));
-                        //gb.Controls.Add(pc);
-                        tl.Controls.Add(pc);
-                        pc.Dock = DockStyle.Top;
-                    }
-                }
+            InitProperties();
+            InitHID();
 
-                gb.Controls.Add(tl);
-                Controls.Add(gb);
+            if (hid == null)
+            {
+                HIDConnectEvent = new EventHandler(HIDConnected);
+                Globals._USBControl.HIDConnected += HIDConnectEvent;
 
-                if (INI.KeyExists("HID", dev.DevicePath))
-                {
-                    string hidPath = INI.ReadINI(dev.DevicePath, "HID");
-                    foreach (HidDevice x in HidDevices.Enumerate(VendorId, ProductId))
-                    {
-                        x.OpenDevice();
-                        if (hidPath.Equals(x.DevicePath)) hid = x;
-                        x.CloseDevice();
-                    }
-                }
+            }
+
+            AllPropertiesVar.ConfigurationUpdate += new EventHandler(UpdateWebcamConfiguration);
+            AllPropertiesVar.DeleteSelectedProperties += new EventHandler(Destroy);
+            AllPropertiesVar.PropertiesValueUpdate += new EventHandler(ExternPropertyUpdate);
+        }
+
+        private void Destroy(object sender, EventArgs e)
+        {
+            this.Dispose();
+        }
+
+        private void UpdateWebcamConfiguration(object sender, EventArgs e)
+        {
+            InitProperties();
+            InitHID();
+            gBox.Text = AllPropertiesVar.GetWebcamName();
+        }
+
+        private void InitProperties()
+        {
+            mainLayout.Controls.Clear();
+
+            foreach (var prop in Enum.GetValues(typeof(CameraControlProperty)))
+                if (INI.KeyExists(prop.ToString(), webcam.DevicePath) && "True".Equals(INI.ReadINI(webcam.DevicePath, prop.ToString())))
+                    mainLayout.Controls.Add(new PropertyControl(pCameraControl, prop));
+            foreach (var prop in Enum.GetValues(typeof(VideoProcAmpProperty)))
+                if (INI.KeyExists(prop.ToString(), webcam.DevicePath) && "True".Equals(INI.ReadINI(webcam.DevicePath, prop.ToString())))
+                    mainLayout.Controls.Add(new PropertyControl(pVideoProcAmp, prop));
+
+            string PropertyHIDButton1Selected = INI.ReadINI(webcam.DevicePath, "PropertyHIDButton1");
+            string PropertyHIDButton2Selected = INI.ReadINI(webcam.DevicePath, "PropertyHIDButton2");
+            for (int i = 0; i < mainLayout.Controls.Count; i++)
+            {
+                PropertyControl item = (PropertyControl)mainLayout.Controls[i];
+                item.Dock = DockStyle.Top;
+                item.ValueUpdate += new EventHandler(PropertyValueUpdate);
+                if (PropertyHIDButton1Selected.Equals(item.ToString()))
+                    PropertyHIDButton1Index = i;
+                if (PropertyHIDButton2Selected.Equals(item.ToString()))
+                    PropertyHIDButton2Index = i;
+            }
+            if (hid != null) SelectNextProperty();
+        }
+
+        private void InitHID()
+        {
+            if (INI.KeyExists("HID", webcam.DevicePath))
+            {
+                string hidPath = INI.ReadINI(webcam.DevicePath, "HID");
+                if (hid != null) hid.CloseDevice();
+                hid = HidDevices.GetDevice(hidPath);
                 if (hid != null)
                 {
                     hid.OpenDevice();
                     mulTimer = new System.Timers.Timer
                     {
-                        Interval = 300,
+                        Interval = 600,
                         AutoReset = true,
                         Enabled = true,
                     };
                     mulTimer.Elapsed += OnTimedEvent;
+                    if (currentProperty == null)
+                        SelectNextProperty();
+                    else
+                        currentProperty.SelectItem(true);
                     hid.ReadReport(OnReport);
-                    //hid.Removed += OnHIDDisconnect;
-
-                    string Button1PropName = INI.ReadINI(dev.DevicePath, "BUTTON1");
-                    string Button2PropName = INI.ReadINI(dev.DevicePath, "BUTTON2");
-                    foreach (Control item in gb.Controls["TableLayout"].Controls)
-                    {
-                        if (item is PropertyControl)
-                        {
-                            ((PropertyControl)item).SelectItem(false);
-                            if (((PropertyControl)item).GetFlagUSB())
-                            {
-                                if (current == null)
-                                {
-                                    current = (PropertyControl)item;
-                                    current.SelectItem(true);
-                                }
-                                if (Button1PropName.Equals(((PropertyControl)item).GetPropertyName())) button1 = (PropertyControl)item;
-                                if (Button2PropName.Equals(((PropertyControl)item).GetPropertyName())) button2 = (PropertyControl)item;
-                            }
-                        }
-                    }
+                    Globals._USBControl.HIDDisconnected += HIDDisconnectEvent;
 
                 }
-
-
+                else
+                {
+                    Globals._USBControl.HIDConnected -= HIDConnectEvent;
+                }
             }
+        }
+
+        private void HIDConnected(object sender, EventArgs e)
+        {
+            InitHID();
+        }
+
+        private void HIDDisconnected(object sender, EventArgs e)
+        {
+            string hidPath = INI.ReadINI(webcam.DevicePath, "HID");
+            hid = HidDevices.GetDevice(hidPath);
+            if (hid == null) HIDDeInit();
+        }
+
+        private void PropertyValueUpdate(object sender, EventArgs e)
+        {
+            PropertiesValueUpdate?.Invoke(sender, e);
+        }
+
+        private void ExternPropertyUpdate(object sender, EventArgs e)
+        {
+            if (sender is PropertyControlSave pcs)
+            {
+                foreach (Control item in mainLayout.Controls)
+                {
+                    if (item is PropertyControl pc)
+                    {
+                        if (pcs.ToString().Equals(pc.ToString()))
+                        {
+                            pc.UpdateValue(pcs);
+                        }
+                    }
+                }
+            }
+        }
+
+        private void SelectNextProperty()
+        {
+            if (++currentIndex == mainLayout.Controls.Count) currentIndex = 0;
+            if (currentProperty != null) currentProperty.SelectItem(false);
+            currentProperty = (PropertyControl)mainLayout.Controls[currentIndex];
+            currentProperty.SelectItem(true);
         }
 
         private void OnTimedEvent(Object source, System.Timers.ElapsedEventArgs e)
         {
-            mul = 1;
+            mul = 0;
         }
 
-        private void OnHIDDisconnect()
+        private void HIDDeInit()
         {
-            Debug.WriteLine("Disconnect");
-            foreach (Control item in Controls["gb"].Controls["TableLayout"].Controls)
+            Globals._USBControl.HIDConnected += HIDConnectEvent;
+            foreach (PropertyControl item in mainLayout.Controls)
             {
-                if (item is PropertyControl)
-                {
-                    ((PropertyControl)item).SelectItem(false);
-                }
+                item.SelectItem(false);
             }
         }
 
         private void OnReport(HidReport report)
         {
-            //if (attached == false) { return; }
-            Debug.WriteLine("ID: " + report.ReportId);
-            Debug.WriteLine("TYPE: " + report.Data[0]);
             if (report.ReportId != 4) return;
             switch (report.Data[0])
             {
                 case 1:
-                    current.AutoMode(false);
-                    current.UpdateValue(mul, (report.Data[1] == 0) ? 1 : -1);
+                    currentProperty.AutoMode(false);
+                    bool dir = report.Data[1] != 0;
+                    Debug.WriteLine(dir);
+                    if (oldDir != dir)
+                    {
+                        oldDir = dir;
+                        mul = 1;
+                    }
+                    else
+                    {
+                        mul++;
+                    }
+                    currentProperty.UpdateValue(mul, dir ? 1 : -1);
                     break;
                 case 2:
-                    current.AutoMode(true);
+                    currentProperty.AutoMode(true);
+                    Debug.WriteLine("Button auto");
                     break;
                 case 3:
-                    current.SelectItem(false);
-                    current = button1;
-                    current.SelectItem(true);
+                    Debug.WriteLine("Button 1");
+                    if (PropertyHIDButton1Index < 0) break;
+                    currentProperty.SelectItem(false);
+                    currentIndex = PropertyHIDButton1Index;
+                    currentProperty = (PropertyControl)mainLayout.Controls[currentIndex];
+                    currentProperty.SelectItem(true);
                     break;
                 case 4:
-                    current.SelectItem(false);
-                    current = button2;
-                    current.SelectItem(true);
+                    Debug.WriteLine("Button 2");
+                    if (PropertyHIDButton2Index < 0) break;
+                    currentProperty.SelectItem(false);
+                    currentIndex = PropertyHIDButton2Index;
+                    currentProperty = (PropertyControl)mainLayout.Controls[currentIndex];
+                    currentProperty.SelectItem(true);
+                    break;
+                case 5:
+                    Debug.WriteLine("Button next");
+                    if (report.Data[1] == 0) break;
+                    SelectNextProperty();
                     break;
             }
             // we need to start listening again for more data

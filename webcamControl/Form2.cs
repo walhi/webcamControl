@@ -14,69 +14,74 @@ namespace webcamControl
 {
     public partial class Form2 : Form
     {
+        private TableLayoutPanel main;
+
         public Form2()
         {
             InitializeComponent();
+
+            //if (_USBControl == null) _USBControl = new USBControl();
+
+            Guid iid = typeof(IBaseFilter).GUID;
             DsDevice[] capDev;
             capDev = DsDevice.GetDevicesOfCat(FilterCategory.VideoInputDevice);
 
-            foreach (DsDevice dev in capDev)
+            main = new TableLayoutPanel
             {
-                TabPage tabPage = new TabPage
-                {
-                    // TODO: Возможность переименовать камеру
-                    Text = dev.Name
-                };
-                object camDevice;
-                Guid iid = typeof(IBaseFilter).GUID;
-
-                dev.Mon.BindToObject(null, null, ref iid, out camDevice);
-                IBaseFilter camFilter = camDevice as IBaseFilter;
-                if (camFilter is IAMCameraControl pCameraControl)
-                {
-                    AllProperties ggg = new AllProperties(dev);
-                    tabPage.Controls.Add(ggg);
-                    tabControl.Controls.Add(tabPage);
-                    ggg.Dock = DockStyle.Top;
-                }
-            }
-            InitSelected();
-
-            tabControl.Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Top | AnchorStyles.Bottom;
-        }
-
-        public void InitSelected()
-        {
-            DsDevice[] capDev;
-            capDev = DsDevice.GetDevicesOfCat(FilterCategory.VideoInputDevice);
-            AllPage.Controls.Clear();
-
-            TableLayoutPanel tl = new TableLayoutPanel
-            {
-                AutoSize = true,
+                AutoSize = true, 
                 AutoSizeMode = AutoSizeMode.GrowOnly,
                 Dock = DockStyle.Top
             };
+            AllPage.Controls.Add(main);
 
             foreach (DsDevice dev in capDev)
             {
-                object camDevice;
-                Guid iid = typeof(IBaseFilter).GUID;
-
-                dev.Mon.BindToObject(null, null, ref iid, out camDevice);
+                dev.Mon.BindToObject(null, null, ref iid, out object camDevice);
                 IBaseFilter camFilter = camDevice as IBaseFilter;
                 if (camFilter is IAMCameraControl pCameraControl)
                 {
-                    if (AllProperties.countSelected(dev) > 0)
+                    TabPage tabPage = new TabPage();
+                    tabControl.Controls.Add(tabPage);
+
+                    AllProperties aProp = new AllProperties(dev)
                     {
-                        SelectedProperties gb = new SelectedProperties(dev);
-                        tl.Controls.Add(gb);
-                        gb.Dock = DockStyle.Top;
-                        //gb.Width = 
+                        Dock = DockStyle.Top,
+                    };
+                    aProp.CreateSelectedProperties += new EventHandler(CreateSelectedProperties);
+                    tabPage.Text = aProp.GetWebcamName();
+                    tabPage.Controls.Add(aProp);
+
+
+                    if (aProp.CountFavorites > 0)
+                    {
+                        SelectedProperties sProp = new SelectedProperties(dev, aProp)
+                        {
+                            Dock = DockStyle.Top
+                        };
+                        main.Controls.Add(sProp);
+                        aProp.SelectedPropertiesVar = sProp;
+                        aProp.AddPropertyUpdateHandler();
                     }
                 }
+
             }
-            AllPage.Controls.Add(tl);
+
+            tabControl.Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Top | AnchorStyles.Bottom;
+
+
         }
+
+
+        private void CreateSelectedProperties(object sender, EventArgs e)
+        {
+            AllProperties x = (AllProperties)sender;
+            SelectedProperties gb = new SelectedProperties(x.GetDevice(), x);
+            main.Controls.Add(gb);
+            gb.Dock = DockStyle.Top;
+            x.SelectedPropertiesVar = gb;
+            x.AddPropertyUpdateHandler();
+        }
+
+
     }
 }
