@@ -10,6 +10,7 @@ using System.Windows.Forms;
 using DirectShowLib;
 using HidLibrary;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 
 namespace webcamControl
 {
@@ -17,7 +18,7 @@ namespace webcamControl
     {
 
 
-        public EventHandler PropertiesValueUpdate;
+        public EventHandler PropertiesSync;
         public EventHandler ConfigurationUpdate;
         public EventHandler CreateSelectedProperties;
         public EventHandler DeleteSelectedProperties;
@@ -30,6 +31,8 @@ namespace webcamControl
         private static IniFile INI = new IniFile("config.ini");
 
         private DsDevice webcam;
+        private IAMCameraControl pCameraControl;
+        private IAMVideoProcAmp pVideoProcAmp;
         private string webcamName;
 
         private const string NotUsedText = "None";
@@ -46,12 +49,9 @@ namespace webcamControl
         public AllProperties(DsDevice dev)
         {
             InitializeComponent();
-            webcam = dev;
-            Guid iid = typeof(IBaseFilter).GUID;
-            webcam.Mon.BindToObject(null, null, ref iid, out object camDevice);
-            IBaseFilter camFilter = camDevice as IBaseFilter;
-            IAMCameraControl pCameraControl = camFilter as IAMCameraControl;
-            IAMVideoProcAmp pVideoProcAmp = camFilter as IAMVideoProcAmp;
+
+            InitWebcam(dev);
+
             webcamName = INI.KeyExists("Name", webcam.DevicePath) ? INI.ReadINI(webcam.DevicePath, "Name") : webcam.Name;
 
 
@@ -66,9 +66,9 @@ namespace webcamControl
 
             // Блок с ползунками
             foreach (var prop in Enum.GetValues(typeof(CameraControlProperty)))
-                main.Controls.Add(new PropertyControlSave(pCameraControl, prop));
+                main.Controls.Add(CreatePropertyControlSave(prop));
             foreach (var prop in Enum.GetValues(typeof(VideoProcAmpProperty)))
-                main.Controls.Add(new PropertyControlSave(pVideoProcAmp, prop));
+                main.Controls.Add(CreatePropertyControlSave(prop));
             foreach (PropertyControlSave pc in main.Controls)
             {
                 if ("True".Equals(INI.ReadINI(webcam.DevicePath, pc.ToString())))
@@ -140,7 +140,65 @@ namespace webcamControl
 
 
             Globals._USBControl.DShowDisconnected += new EventHandler(WebcamDisconnected);
+            Globals._USBControl.DShowConnected += new EventHandler(WebcamConnected);
 
+        }
+
+        private void InitWebcam(DsDevice dev)
+        {
+            if (webcam != null)
+            {
+                //Marshal.ReleaseComObject(camFilter); camFilter = null;
+                webcam.Dispose();
+                pCameraControl = null;
+                pVideoProcAmp = null;
+            }
+            webcam = dev;
+            Debug.WriteLine(dev.Name);
+            Debug.WriteLine(webcam.Name);
+            Guid iid = typeof(IBaseFilter).GUID;
+            webcam.Mon.BindToObject(null, null, ref iid, out object camDevice);
+            IBaseFilter camFilter = camDevice as IBaseFilter;
+            pCameraControl = camFilter as IAMCameraControl;
+            pVideoProcAmp = camFilter as IAMVideoProcAmp;
+
+        }
+
+        private PropertyControlSave CreatePropertyControlSave(object property)
+        {
+            bool none, autoSupport, manualSupport, auto, manual;
+            int pMax, pMin, pValue, pSteppingDelta, defaultValue;
+
+            if (Object.ReferenceEquals(property.GetType(), new CameraControlProperty().GetType()))
+            {
+                CameraControlFlags cameraFlags;
+                pCameraControl.GetRange((CameraControlProperty)property, out pMin, out pMax, out pSteppingDelta, out defaultValue, out cameraFlags);
+                none = cameraFlags == CameraControlFlags.None;
+                autoSupport = (cameraFlags & CameraControlFlags.Auto) == CameraControlFlags.Auto;
+                manualSupport = (cameraFlags & CameraControlFlags.Manual) == CameraControlFlags.Manual;
+                pCameraControl.Get((CameraControlProperty)property, out pValue, out cameraFlags);
+                auto = (cameraFlags & CameraControlFlags.Auto) == CameraControlFlags.Auto;
+                manual = (cameraFlags & CameraControlFlags.Manual) == CameraControlFlags.Manual;
+            }
+            else if (pVideoProcAmp != null)
+            {
+                // VideoProcAmpProperty
+                VideoProcAmpFlags cameraFlags;
+                pVideoProcAmp.GetRange((VideoProcAmpProperty)property, out pMin, out pMax, out pSteppingDelta, out defaultValue, out cameraFlags);
+                none = cameraFlags == VideoProcAmpFlags.None;
+                autoSupport = (cameraFlags & VideoProcAmpFlags.Auto) == VideoProcAmpFlags.Auto;
+                manualSupport = (cameraFlags & VideoProcAmpFlags.Manual) == VideoProcAmpFlags.Manual;
+                pVideoProcAmp.Get((VideoProcAmpProperty)property, out pValue, out cameraFlags);
+                auto = (cameraFlags & VideoProcAmpFlags.Auto) == VideoProcAmpFlags.Auto;
+                manual = (cameraFlags & VideoProcAmpFlags.Manual) == VideoProcAmpFlags.Manual;
+            } else
+            {
+                none = true;
+                autoSupport = manualSupport = auto = manual = false;
+                pMax = pMin = pValue = pSteppingDelta = defaultValue = 0;
+
+            }
+            return new PropertyControlSave(property, none, autoSupport, manualSupport, auto, manual, pMax, pMin, pValue, pSteppingDelta, defaultValue);
         }
 
         private void WebcamDisconnected(object sender, EventArgs e)
@@ -151,27 +209,70 @@ namespace webcamControl
             if (dev.DevicePath.Equals(webcam.DevicePath))
             {
                 Debug.WriteLine("t2");
-                this.BackColor = Color.Red;
+                //this.BackColor = Color.Red;
                 //Globals._USBControl.DShowConnected += new EventHandler(HIDUpdateHandler);
+                foreach (Control item in main.Controls)
+                {
+                    if (item is PropertyControlSave)
+                    {
+                        //((PropertyControlSave)item).Enabled = false;
+                    }
+                }
             }
         }
 
         private void WebcamConnected(object sender, EventArgs e)
         {
-            Debug.WriteLine("WebcamDisconnected" + sender.GetType().ToString());
+            Debug.WriteLine("WebcamConnected" + sender.GetType().ToString());
             if (!(sender is DsDevice dev)) return;
             Debug.WriteLine("t1");
             if (dev.DevicePath.Equals(webcam.DevicePath))
             {
                 Debug.WriteLine("t2");
-                this.BackColor = Color.Red;
+                InitWebcam(dev);
+                //this.BackColor = Color.Red;
                 //Globals._USBControl.DShowConnected += new EventHandler(HIDUpdateHandler);
             }
         }
 
         private void PropertyValueUpdate(object sender, EventArgs e)
         {
-            PropertiesValueUpdate?.Invoke(sender, e);
+            PropertiesSync?.Invoke(sender, e);
+            PropertyControlSave pc = (PropertyControlSave)sender;
+
+            int value = pc.GetValue();
+            bool auto = pc.GetAutoMode();
+
+            Debug.WriteLine("PropertyValueUpdate");
+            try
+            {
+                if (Object.ReferenceEquals(pc.GetProperty().GetType(), new CameraControlProperty().GetType()))
+                {
+                    pCameraControl.Set((CameraControlProperty)pc.GetProperty(), value, auto ? CameraControlFlags.Auto : CameraControlFlags.Manual);
+                }
+                else
+                {
+                    // VideoProcAmpProperty
+                    pVideoProcAmp.Set((VideoProcAmpProperty)pc.GetProperty(), value, auto ? VideoProcAmpFlags.Auto : VideoProcAmpFlags.Manual);
+                }
+            }
+            catch
+            {
+                Guid iid = typeof(IBaseFilter).GUID;
+                webcam.Mon.BindToObject(null, null, ref iid, out object camDevice);
+                IBaseFilter camFilter2 = camDevice as IBaseFilter;
+                IAMCameraControl pCameraControl2 = camFilter2 as IAMCameraControl;
+                IAMVideoProcAmp pVideoProcAmp2 = camFilter2 as IAMVideoProcAmp;
+                if (Object.ReferenceEquals(pc.GetProperty().GetType(), new CameraControlProperty().GetType()))
+                {
+                    pCameraControl2.Set((CameraControlProperty)pc.GetProperty(), value, auto ? CameraControlFlags.Auto : CameraControlFlags.Manual);
+                }
+                else
+                {
+                    // VideoProcAmpProperty
+                    pVideoProcAmp2.Set((VideoProcAmpProperty)pc.GetProperty(), value, auto ? VideoProcAmpFlags.Auto : VideoProcAmpFlags.Manual);
+                }
+            }
         }
 
         private void FavoritesUpdate(object sender, EventArgs e)
@@ -352,7 +453,7 @@ namespace webcamControl
 
         public void AddPropertyUpdateHandler()
         {
-            SelectedPropertiesVar.PropertiesValueUpdate += new EventHandler(ExternPropertyUpdate);
+            SelectedPropertiesVar.PropertiesSync += new EventHandler(ExternPropertyUpdate);
         }
 
         private void ExternPropertyUpdate(object sender, EventArgs e)
@@ -365,7 +466,7 @@ namespace webcamControl
                 {
                     if (pc.ToString().Equals(((PropertyControlSave)item).ToString()))
                     {
-                        ((PropertyControlSave)item).UpdateValue(pc);
+                        ((PropertyControlSave)item).SyncValue(pc);
                     }
                 }
             }

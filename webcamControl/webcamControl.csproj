@@ -12,7 +12,8 @@
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
     <IsWebBootstrapper>false</IsWebBootstrapper>
-    <PublishUrl>\\nuc\3d_print\sw\</PublishUrl>
+    <TargetFrameworkProfile />
+    <PublishUrl>E:\webcamControl\</PublishUrl>
     <Install>true</Install>
     <InstallFrom>Disk</InstallFrom>
     <UpdateEnabled>false</UpdateEnabled>
@@ -23,13 +24,11 @@
     <UpdateRequired>false</UpdateRequired>
     <MapFileExtensions>true</MapFileExtensions>
     <WebPage>publish.htm</WebPage>
-    <AutorunEnabled>true</AutorunEnabled>
     <ApplicationRevision>3</ApplicationRevision>
     <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
     <UseApplicationTrust>false</UseApplicationTrust>
     <PublishWizardCompleted>true</PublishWizardCompleted>
     <BootstrapperEnabled>true</BootstrapperEnabled>
-    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -132,6 +131,7 @@
     <Compile Include="SelectedProperties.Designer.cs">
       <DependentUpon>SelectedProperties.cs</DependentUpon>
     </Compile>
+    <Compile Include="USBControl.cs" />
     <Compile Include="webcam.cs">
       <SubType>UserControl</SubType>
     </Compile>

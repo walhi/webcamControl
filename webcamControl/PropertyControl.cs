@@ -16,45 +16,18 @@ namespace webcamControl
         public EventHandler ValueUpdate;
 
         private object Property;
-        private object Control;
         private int defaultValue;
         private bool usb = false;
 
-        public PropertyControl(object ctrl, object prop)
+        public PropertyControl(object prop, bool none, bool autoSupport, bool manualSupport, bool auto, bool manual, int pMax, int pMin, int pValue, int pSteppingDelta, int defaultValueInit)
         {
             InitializeComponent();
 
             Property = prop;
-            Control = ctrl;
-            bool none, autoSupport, manualSupport, auto, manual;
-            int pMax, pMin, pValue,  pSteppingDelta;
 
-            if (Object.ReferenceEquals(Property.GetType(), new CameraControlProperty().GetType()))
-            {
-                label.Text = ((CameraControlProperty)prop).ToString();
-                CameraControlFlags cameraFlags;
-                ((IAMCameraControl)Control).GetRange((CameraControlProperty)prop, out pMin, out pMax, out pSteppingDelta, out defaultValue, out cameraFlags);
-                none = cameraFlags == CameraControlFlags.None;
-                autoSupport = (cameraFlags & CameraControlFlags.Auto) == CameraControlFlags.Auto;
-                manualSupport = (cameraFlags & CameraControlFlags.Manual) == CameraControlFlags.Manual;
-                ((IAMCameraControl)Control).Get((CameraControlProperty)prop, out pValue, out cameraFlags);
-                auto = (cameraFlags & CameraControlFlags.Auto) == CameraControlFlags.Auto;
-                manual = (cameraFlags & CameraControlFlags.Manual) == CameraControlFlags.Manual;
-            }
-            else
-            {
-                // VideoProcAmpProperty
-                label.Text = ((VideoProcAmpProperty)Property).ToString();
-                VideoProcAmpFlags cameraFlags;
-                ((IAMVideoProcAmp)Control).GetRange((VideoProcAmpProperty)prop, out pMin, out pMax, out pSteppingDelta, out defaultValue, out cameraFlags);
-                none = cameraFlags == VideoProcAmpFlags.None;
-                autoSupport = (cameraFlags & VideoProcAmpFlags.Auto) == VideoProcAmpFlags.Auto;
-                manualSupport = (cameraFlags & VideoProcAmpFlags.Manual) == VideoProcAmpFlags.Manual;
-                ((IAMVideoProcAmp)Control).Get((VideoProcAmpProperty)prop, out pValue, out cameraFlags);
-                auto = (cameraFlags & VideoProcAmpFlags.Auto) == VideoProcAmpFlags.Auto;
-                manual = (cameraFlags & VideoProcAmpFlags.Manual) == VideoProcAmpFlags.Manual;
-            }
+            label.Text = this.ToString();
 
+            defaultValue = defaultValueInit;
 
             label.Enabled = !none;
             cbAuto.Enabled = !none;
@@ -68,8 +41,7 @@ namespace webcamControl
                 trackBar.Maximum = pMax;
                 trackBar.TickFrequency = pSteppingDelta;
                 trackBar.Value = pValue;
-                //trackBar.Value = pMax - pValue + pMin;
-                trackBar.MouseDown += new MouseEventHandler(resetDefault);
+                trackBar.MouseDown += new MouseEventHandler(ResetDefault);
             }
         }
 
@@ -88,6 +60,16 @@ namespace webcamControl
         public bool GetAutoMode()
         {
             return cbAuto.Checked;
+        }
+
+        public object GetProperty()
+        {
+            return Property;
+        }
+
+        public int GetValue()
+        {
+            return trackBar.Value;
         }
 
         public int GetPropertyValue()
@@ -169,24 +151,14 @@ namespace webcamControl
             ValueUpdate?.Invoke(this, new EventArgs());
         }
 
-        private void setValue(int newValue, bool auto)
+        private void SetValue(int newValue, bool auto)
         {
-
-            if (Object.ReferenceEquals(Property.GetType(), new CameraControlProperty().GetType()))
-            {
-                ((IAMCameraControl)Control).Set((CameraControlProperty)Property, newValue, auto? CameraControlFlags.Auto:CameraControlFlags.Manual);
-            }
-            else
-            {
-                // VideoProcAmpProperty
-                ((IAMVideoProcAmp)Control).Set((VideoProcAmpProperty)Property, newValue, auto ? VideoProcAmpFlags.Auto : VideoProcAmpFlags.Manual);
-            }
         }
 
         private void trackBar_Scroll(object sender, EventArgs e)
         {
             int Value = trackBar.Value - trackBar.Value % trackBar.TickFrequency;
-            setValue(trackBar.Value, false);
+            SetValue(trackBar.Value, false);
             ValueUpdate?.Invoke(this, new EventArgs());
         }
 
@@ -196,26 +168,27 @@ namespace webcamControl
             if (cbAuto.Checked)
             {
                 // todo
-                setValue(trackBar.Minimum, false);
-                setValue(trackBar.Minimum, true);
+                SetValue(trackBar.Minimum, false);
+                SetValue(trackBar.Minimum, true);
             }
             else
             {
-                setValue(trackBar.Value, false);
+                SetValue(trackBar.Value, false);
             }
             ValueUpdate?.Invoke(this, new EventArgs());
         }
 
-        private void resetDefault(object sender, EventArgs e)
+        private void ResetDefault(object sender, EventArgs e)
         {
             if (((MouseEventArgs)e).Button == MouseButtons.Left) return;
             trackBar.Value = defaultValue;
-            setValue(trackBar.Value, false);
+            SetValue(trackBar.Value, false);
+            ValueUpdate?.Invoke(this, new EventArgs());
         }
 
-        public void UpdateValue(PropertyControlSave pc)
+        public void SyncValue(PropertyControlSave pc)
         {
-            trackBar.Value = pc.GetPropertyValue();
+            trackBar.Value = pc.GetValue();
             cbAuto.Checked = pc.GetAutoMode();
         }
     }

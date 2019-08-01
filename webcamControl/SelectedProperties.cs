@@ -15,15 +15,11 @@ namespace webcamControl
 {
     public partial class SelectedProperties : UserControl
     {
-        private const int VendorId = 0x0483;
-        private const int ProductId = 0x5750;
-
-        public EventHandler PropertiesValueUpdate;
+        public EventHandler PropertiesSync;
         private AllProperties AllPropertiesVar;
 
         private EventHandler HIDConnectEvent;
         private EventHandler HIDDisconnectEvent;
-
 
         private IniFile INI = new IniFile("config.ini");
         private DsDevice webcam;
@@ -35,12 +31,13 @@ namespace webcamControl
         private System.Timers.Timer mulTimer;
         private int mul = 0;
         private bool oldDir = false;
+
         private GroupBox gBox;
         private TableLayoutPanel mainLayout;
         private PropertyControl currentProperty;
         private int currentIndex = 0;
-        private int PropertyHIDButton1Index;
-        private int PropertyHIDButton2Index;
+        private int PropertyHIDButton1Index = -1;
+        private int PropertyHIDButton2Index = -1;
 
         public SelectedProperties(DsDevice dev, AllProperties all)
         {
@@ -51,7 +48,7 @@ namespace webcamControl
             HIDConnectEvent = new EventHandler(HIDConnected);
             HIDDisconnectEvent = new EventHandler(HIDDisconnected);
 
-        Guid iid = typeof(IBaseFilter).GUID;
+            Guid iid = typeof(IBaseFilter).GUID;
             webcam.Mon.BindToObject(null, null, ref iid, out object camDevice);
             IBaseFilter camFilter = camDevice as IBaseFilter;
             pCameraControl = camFilter as IAMCameraControl;
@@ -94,7 +91,7 @@ namespace webcamControl
 
             AllPropertiesVar.ConfigurationUpdate += new EventHandler(UpdateWebcamConfiguration);
             AllPropertiesVar.DeleteSelectedProperties += new EventHandler(Destroy);
-            AllPropertiesVar.PropertiesValueUpdate += new EventHandler(ExternPropertyUpdate);
+            AllPropertiesVar.PropertiesSync += new EventHandler(ExternPropertyUpdate);
         }
 
         private void Destroy(object sender, EventArgs e)
@@ -115,10 +112,10 @@ namespace webcamControl
 
             foreach (var prop in Enum.GetValues(typeof(CameraControlProperty)))
                 if (INI.KeyExists(prop.ToString(), webcam.DevicePath) && "True".Equals(INI.ReadINI(webcam.DevicePath, prop.ToString())))
-                    mainLayout.Controls.Add(new PropertyControl(pCameraControl, prop));
+                    mainLayout.Controls.Add(CreatePropertyControl(prop));
             foreach (var prop in Enum.GetValues(typeof(VideoProcAmpProperty)))
                 if (INI.KeyExists(prop.ToString(), webcam.DevicePath) && "True".Equals(INI.ReadINI(webcam.DevicePath, prop.ToString())))
-                    mainLayout.Controls.Add(new PropertyControl(pVideoProcAmp, prop));
+                    mainLayout.Controls.Add(CreatePropertyControl(prop));
 
             string PropertyHIDButton1Selected = INI.ReadINI(webcam.DevicePath, "PropertyHIDButton1");
             string PropertyHIDButton2Selected = INI.ReadINI(webcam.DevicePath, "PropertyHIDButton2");
@@ -133,6 +130,38 @@ namespace webcamControl
                     PropertyHIDButton2Index = i;
             }
             if (hid != null) SelectNextProperty();
+        }
+
+        private PropertyControl CreatePropertyControl(object property)
+        {
+            bool none, autoSupport, manualSupport, auto, manual;
+            int pMax, pMin, pValue, pSteppingDelta, defaultValue;
+
+            if (Object.ReferenceEquals(property.GetType(), new CameraControlProperty().GetType()))
+            {
+                CameraControlFlags cameraFlags;
+                pCameraControl.GetRange((CameraControlProperty)property, out pMin, out pMax, out pSteppingDelta, out defaultValue, out cameraFlags);
+                none = cameraFlags == CameraControlFlags.None;
+                autoSupport = (cameraFlags & CameraControlFlags.Auto) == CameraControlFlags.Auto;
+                manualSupport = (cameraFlags & CameraControlFlags.Manual) == CameraControlFlags.Manual;
+                pCameraControl.Get((CameraControlProperty)property, out pValue, out cameraFlags);
+                auto = (cameraFlags & CameraControlFlags.Auto) == CameraControlFlags.Auto;
+                manual = (cameraFlags & CameraControlFlags.Manual) == CameraControlFlags.Manual;
+            }
+            else
+            {
+                // VideoProcAmpProperty
+                VideoProcAmpFlags cameraFlags;
+                pVideoProcAmp.GetRange(
+                    (VideoProcAmpProperty)property, out pMin, out pMax, out pSteppingDelta, out defaultValue, out cameraFlags);
+                none = cameraFlags == VideoProcAmpFlags.None;
+                autoSupport = (cameraFlags & VideoProcAmpFlags.Auto) == VideoProcAmpFlags.Auto;
+                manualSupport = (cameraFlags & VideoProcAmpFlags.Manual) == VideoProcAmpFlags.Manual;
+                pVideoProcAmp.Get((VideoProcAmpProperty)property, out pValue, out cameraFlags);
+                auto = (cameraFlags & VideoProcAmpFlags.Auto) == VideoProcAmpFlags.Auto;
+                manual = (cameraFlags & VideoProcAmpFlags.Manual) == VideoProcAmpFlags.Manual;
+            }
+            return new PropertyControl(property, none, autoSupport, manualSupport, auto, manual, pMax, pMin, pValue, pSteppingDelta, defaultValue);
         }
 
         private void InitHID()
@@ -181,7 +210,21 @@ namespace webcamControl
 
         private void PropertyValueUpdate(object sender, EventArgs e)
         {
-            PropertiesValueUpdate?.Invoke(sender, e);
+            PropertiesSync?.Invoke(sender, e);
+            PropertyControl pc = (PropertyControl)sender;
+
+            int value = pc.GetValue();
+            bool auto = pc.GetAutoMode();
+
+            if (Object.ReferenceEquals(pc.GetProperty().GetType(), new CameraControlProperty().GetType()))
+            {
+                pCameraControl.Set((CameraControlProperty)pc.GetProperty(), value, auto ? CameraControlFlags.Auto : CameraControlFlags.Manual);
+            }
+            else
+            {
+                // VideoProcAmpProperty
+                pVideoProcAmp.Set((VideoProcAmpProperty)pc.GetProperty(), value, auto ? VideoProcAmpFlags.Auto : VideoProcAmpFlags.Manual);
+            }
         }
 
         private void ExternPropertyUpdate(object sender, EventArgs e)
@@ -194,7 +237,7 @@ namespace webcamControl
                     {
                         if (pcs.ToString().Equals(pc.ToString()))
                         {
-                            pc.UpdateValue(pcs);
+                            pc.SyncValue(pcs);
                         }
                     }
                 }
