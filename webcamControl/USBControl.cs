@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Management;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace webcamControl
@@ -58,9 +59,28 @@ namespace webcamControl
             //you may want to yield or Thread.Sleep
         }
 
+        public DsDevice[] GetDsDevices()
+        {
+            //return DsDevice.GetDevicesOfCat(FilterCategory.VideoInputDevice);
+            Guid iid = typeof(IBaseFilter).GUID;
+            List<DsDevice> capDev = new List<DsDevice>();
+
+            foreach (DsDevice dev in DsDevice.GetDevicesOfCat(FilterCategory.VideoInputDevice))
+            {
+                //dev.Mon.BindToObject(null, null, ref iid, out object camDevice);
+                //IBaseFilter camFilter = camDevice as IBaseFilter;
+                //if (camFilter is IAMCameraControl pCameraControl)
+                //{
+                //    capDev.Add(dev);
+                //}
+                if (dev.DevicePath.IndexOf("usb#vid") >= 0) capDev.Add(dev);
+            }
+            return capDev.ToArray();
+        }
+
         private int GetCountDShow()
         {
-            return DsDevice.GetDevicesOfCat(FilterCategory.VideoInputDevice).Length;
+            return GetDsDevices().Length;
         }
 
         private int GetCountHID()
@@ -73,6 +93,7 @@ namespace webcamControl
 
         private void UpdateUSBDevices(object sender, EventArrivedEventArgs e)
         {
+            //Thread.Sleep(1000);
             int currentCountDShow = GetCountDShow();
             int currentCountHID = GetCountHID();
 

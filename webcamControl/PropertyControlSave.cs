@@ -18,6 +18,7 @@ namespace webcamControl
         private int startupValue;
         public EventHandler FavoriteUpdate;
         public EventHandler ValueUpdate;
+        public EventHandler SyncControls;
 
         public PropertyControlSave(object prop, bool none, bool autoSupport, bool manualSupport, bool auto, bool manual, int pMax, int pMin, int pValue, int pSteppingDelta, int defaultValueInit)
         {
@@ -97,6 +98,7 @@ namespace webcamControl
             int Value = trackBar.Value - trackBar.Value % trackBar.TickFrequency;
             SetValue(trackBar.Value, false);
             ValueUpdate?.Invoke(this, new EventArgs());
+            SyncControls?.Invoke(this, new EventArgs());
         }
 
         private void cbAuto_CheckedChanged(object sender, EventArgs e)
@@ -113,6 +115,7 @@ namespace webcamControl
                 SetValue(trackBar.Value, false);
             }
             ValueUpdate?.Invoke(this, new EventArgs());
+            SyncControls?.Invoke(this, new EventArgs());
         }
 
         private void resetDefault(object sender, EventArgs e)
@@ -121,6 +124,7 @@ namespace webcamControl
             trackBar.Value = defaultValue;
             SetValue(trackBar.Value, false);
             ValueUpdate?.Invoke(this, new EventArgs());
+            SyncControls?.Invoke(this, new EventArgs());
         }
 
         private void cbFavorite_CheckedChanged(object sender, EventArgs e)
@@ -133,6 +137,7 @@ namespace webcamControl
         {
             trackBar.Value = pc.GetPropertyValue();
             cbAuto.Checked = pc.GetAutoMode();
+            ValueUpdate?.Invoke(this, new EventArgs());
         }
     }
 }

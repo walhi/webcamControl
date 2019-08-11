@@ -29,6 +29,7 @@ namespace webcamControl
         private HidDevice hid;
 
         private System.Timers.Timer mulTimer;
+        private System.Timers.Timer alertTimer;
         private int mul = 0;
         private bool oldDir = false;
 
@@ -39,12 +40,11 @@ namespace webcamControl
         private int PropertyHIDButton1Index = -1;
         private int PropertyHIDButton2Index = -1;
 
-        public SelectedProperties(DsDevice dev, AllProperties all)
+        public SelectedProperties(DsDevice dev)
         {
             InitializeComponent();
 
             webcam = dev;
-            AllPropertiesVar = all;
             HIDConnectEvent = new EventHandler(HIDConnected);
             HIDDisconnectEvent = new EventHandler(HIDDisconnected);
 
@@ -89,6 +89,19 @@ namespace webcamControl
 
             }
 
+
+            alertTimer = new System.Timers.Timer
+            {
+                Interval = 600,
+                AutoReset = true,
+                Enabled = false,
+            };
+            alertTimer.Elapsed += AlertTimedEvent;
+        }
+
+        public void SetAllProp(AllProperties aProp)
+        {
+            AllPropertiesVar = aProp;
             AllPropertiesVar.ConfigurationUpdate += new EventHandler(UpdateWebcamConfiguration);
             AllPropertiesVar.DeleteSelectedProperties += new EventHandler(Destroy);
             AllPropertiesVar.PropertiesSync += new EventHandler(ExternPropertyUpdate);
@@ -180,7 +193,7 @@ namespace webcamControl
                         AutoReset = true,
                         Enabled = true,
                     };
-                    mulTimer.Elapsed += OnTimedEvent;
+                    mulTimer.Elapsed += HIDTimedEvent;
                     if (currentProperty == null)
                         SelectNextProperty();
                     else
@@ -211,20 +224,6 @@ namespace webcamControl
         private void PropertyValueUpdate(object sender, EventArgs e)
         {
             PropertiesSync?.Invoke(sender, e);
-            PropertyControl pc = (PropertyControl)sender;
-
-            int value = pc.GetValue();
-            bool auto = pc.GetAutoMode();
-
-            if (Object.ReferenceEquals(pc.GetProperty().GetType(), new CameraControlProperty().GetType()))
-            {
-                pCameraControl.Set((CameraControlProperty)pc.GetProperty(), value, auto ? CameraControlFlags.Auto : CameraControlFlags.Manual);
-            }
-            else
-            {
-                // VideoProcAmpProperty
-                pVideoProcAmp.Set((VideoProcAmpProperty)pc.GetProperty(), value, auto ? VideoProcAmpFlags.Auto : VideoProcAmpFlags.Manual);
-            }
         }
 
         private void ExternPropertyUpdate(object sender, EventArgs e)
@@ -252,10 +251,58 @@ namespace webcamControl
             currentProperty.SelectItem(true);
         }
 
-        private void OnTimedEvent(Object source, System.Timers.ElapsedEventArgs e)
+        private void HIDTimedEvent(Object source, System.Timers.ElapsedEventArgs e)
         {
             mul = 0;
         }
+
+        public void WebcamDisconnect()
+        {
+            alertTimer.Enabled = true;
+            AlertTimedEvent(alertTimer, null);
+        }
+
+        private void AlertTimedEvent(Object source, System.Timers.ElapsedEventArgs e)
+        {
+            if (this.InvokeRequired)
+            {
+                this.Invoke((MethodInvoker)(() =>
+                {
+                    AlertTimedEventImpl();
+                }
+                ));
+            }
+            else
+            {
+                AlertTimedEventImpl();
+            }
+        }
+        private void AlertTimedEventImpl()
+        {
+            if (this.ForeColor != Color.Red)
+            {
+                this.ForeColor = Color.Red;
+            }
+            else
+            {
+                this.ForeColor = SystemColors.ControlText;
+            }
+        }
+        public void WebcamConnect()
+        {
+            alertTimer.Enabled = false;
+            if (this.ForeColor == Color.Red)
+                AlertTimedEvent(alertTimer, null);
+
+            foreach (Control item in mainLayout.Controls)
+            {
+                if (item is PropertyControl pc)
+                {
+                    PropertyValueUpdate(pc, new EventArgs());
+                }
+            }
+        }
+
 
         private void HIDDeInit()
         {

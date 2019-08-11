@@ -20,11 +20,6 @@ namespace webcamControl
         {
             InitializeComponent();
 
-            //if (_USBControl == null) _USBControl = new USBControl();
-
-            Guid iid = typeof(IBaseFilter).GUID;
-            DsDevice[] capDev;
-            capDev = DsDevice.GetDevicesOfCat(FilterCategory.VideoInputDevice);
 
             main = new TableLayoutPanel
             {
@@ -34,54 +29,104 @@ namespace webcamControl
             };
             AllPage.Controls.Add(main);
 
-            foreach (DsDevice dev in capDev)
-            {
-                dev.Mon.BindToObject(null, null, ref iid, out object camDevice);
-                IBaseFilter camFilter = camDevice as IBaseFilter;
-                if (camFilter is IAMCameraControl pCameraControl)
-                {
-                    TabPage tabPage = new TabPage();
-                    tabControl.Controls.Add(tabPage);
-
-                    AllProperties aProp = new AllProperties(dev)
-                    {
-                        Dock = DockStyle.Top,
-                    };
-                    aProp.CreateSelectedProperties += new EventHandler(CreateSelectedProperties);
-                    tabPage.Text = aProp.GetWebcamName();
-                    tabPage.Controls.Add(aProp);
-
-
-                    if (aProp.CountFavorites > 0)
-                    {
-                        SelectedProperties sProp = new SelectedProperties(dev, aProp)
-                        {
-                            Dock = DockStyle.Top
-                        };
-                        main.Controls.Add(sProp);
-                        aProp.SelectedPropertiesVar = sProp;
-                        aProp.AddPropertyUpdateHandler();
-                    }
-                }
-
-            }
+            foreach (DsDevice dev in Globals._USBControl.GetDsDevices())
+                tabControl.Controls.Add(InitTabPage(dev));
 
             tabControl.Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Top | AnchorStyles.Bottom;
 
-
+            Globals._USBControl.DShowConnected += new EventHandler(DsDeviceConnect);
+            Globals._USBControl.DShowDisconnected += new EventHandler(DsDeviceDisconnect);
         }
 
+        private TabPageCustom InitTabPage(DsDevice dev)
+        {
+            TabPageCustom tabPage = new TabPageCustom(dev);
+
+            AllProperties aProp = new AllProperties(dev)
+            {
+                Dock = DockStyle.Top,
+            };
+            aProp.CreateSelectedProperties += new EventHandler(CreateSelectedProperties);
+            tabPage.Text = aProp.GetWebcamName();
+            tabPage.Controls.Add(aProp);
+
+
+            if (aProp.CountFavorites > 0)
+            {
+                SelectedProperties sProp = new SelectedProperties(dev)
+                {
+                    Dock = DockStyle.Top
+                };
+                main.Controls.Add(sProp);
+                sProp.SetAllProp(aProp);
+                aProp.SelectedPropertiesVar = sProp;
+                aProp.AddPropertyUpdateHandler();
+                tabPage.sProp = sProp;
+            }
+            return tabPage;
+        }
+
+        private void DsDeviceConnect(object sender, EventArgs e)
+        {
+            if (!(sender is DsDevice dev)) return;
+            if (this.InvokeRequired)
+            {
+                this.Invoke((MethodInvoker)(() =>
+                {
+                    DsDeviceConnectImpl(dev);
+                }
+                ));
+            }
+            else
+            {
+                DsDeviceConnectImpl(dev);
+            }
+        }
+        private void DsDeviceConnectImpl(DsDevice dev)
+        {
+            bool flag = true;
+            foreach (object tab in tabControl.Controls)
+            {
+                if (tab is TabPageCustom tp)
+                {
+                    if (dev.DevicePath.Equals(tp.GetDsDevice().DevicePath))
+                    {
+                        tp.WebcamConnected(dev);
+                        flag = false;
+                    }
+                }
+            }
+            if (flag)
+            {
+                tabControl.Controls.Add(InitTabPage(dev));
+            }
+        }
+        private void DsDeviceDisconnect(object sender, EventArgs e)
+        {
+            if (!(sender is DsDevice dev)) return;
+            foreach (object tab in tabControl.Controls)
+            {
+                if (tab is TabPageCustom tp)
+                {
+                    if (dev.DevicePath.Equals(tp.GetDsDevice().DevicePath))
+                    {
+                        tp.WebcamDisconnected();
+                    }
+                }
+            }
+        }
 
         private void CreateSelectedProperties(object sender, EventArgs e)
         {
-            AllProperties x = (AllProperties)sender;
-            SelectedProperties gb = new SelectedProperties(x.GetDevice(), x);
-            main.Controls.Add(gb);
-            gb.Dock = DockStyle.Top;
-            x.SelectedPropertiesVar = gb;
-            x.AddPropertyUpdateHandler();
+            AllProperties aProp = (AllProperties)sender;
+            SelectedProperties sProp = new SelectedProperties(aProp.GetDevice())
+            {
+                Dock = DockStyle.Top
+            };
+            sProp.SetAllProp(aProp);
+            main.Controls.Add(sProp);
+            aProp.SelectedPropertiesVar = sProp;
+            aProp.AddPropertyUpdateHandler();
         }
-
-
     }
 }
