@@ -21,6 +21,9 @@ namespace webcamControl
             InitializeComponent();
 
 
+            //init tray
+            this.Resize += new System.EventHandler(this.Form_Resize);
+
             main = new TableLayoutPanel
             {
                 AutoSize = true, 
@@ -65,7 +68,6 @@ namespace webcamControl
             }
             return tabPage;
         }
-
         private void DsDeviceConnect(object sender, EventArgs e)
         {
             if (!(sender is DsDevice dev)) return;
@@ -82,6 +84,7 @@ namespace webcamControl
                 DsDeviceConnectImpl(dev);
             }
         }
+
         private void DsDeviceConnectImpl(DsDevice dev)
         {
             bool flag = true;
@@ -92,6 +95,7 @@ namespace webcamControl
                     if (dev.DevicePath.Equals(tp.GetDsDevice().DevicePath))
                     {
                         tp.WebcamConnected(dev);
+                        notifyIcon.ShowBalloonTip(1000, "Webcam connected", dev.Name, ToolTipIcon.Info);
                         flag = false;
                     }
                 }
@@ -111,6 +115,7 @@ namespace webcamControl
                     if (dev.DevicePath.Equals(tp.GetDsDevice().DevicePath))
                     {
                         tp.WebcamDisconnected();
+                        notifyIcon.ShowBalloonTip(2000, "Webcam disconnected", dev.Name, ToolTipIcon.Warning);
                     }
                 }
             }
@@ -127,6 +132,44 @@ namespace webcamControl
             main.Controls.Add(sProp);
             aProp.SelectedPropertiesVar = sProp;
             aProp.AddPropertyUpdateHandler();
+        }
+        private void Form_Resize(object sender, EventArgs e)
+        {     
+            if (WindowState == FormWindowState.Minimized)
+            {
+                this.ShowInTaskbar = false;
+                Show.Enabled = true;
+                Hide.Enabled = false;
+            }
+            else
+            {
+                this.ShowInTaskbar = true;
+                Show.Enabled = false;
+                Hide.Enabled = true;
+            }
+        }
+
+        private void NotifyIcon_MouseDoubleClick(object sender, MouseEventArgs e)
+        {
+            //notifyIcon.Visible = false;
+            if (this.ShowInTaskbar)
+            {
+                this.ShowInTaskbar = false;
+                WindowState = FormWindowState.Minimized;
+            }
+            else
+            {
+                this.ShowInTaskbar = true;
+                WindowState = FormWindowState.Normal;
+            }
+        }
+
+        private void trayMenu_ItemClicked(object sender, ToolStripItemClickedEventArgs e)
+        {
+            var item = e.ClickedItem;
+            if (item.Equals(Show) || item.Equals(Hide)) NotifyIcon_MouseDoubleClick(notifyIcon, null);
+            if (item.Equals(Exit)) this.Close();
+
         }
     }
 }

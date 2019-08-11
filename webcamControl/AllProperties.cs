@@ -50,100 +50,113 @@ namespace webcamControl
         {
             InitializeComponent();
 
-            webcam = dev;
-            Guid iid = typeof(IBaseFilter).GUID;
-            webcam.Mon.BindToObject(null, null, ref iid, out object camDevice);
-            IBaseFilter camFilter = camDevice as IBaseFilter;
-            pCameraControl = camFilter as IAMCameraControl;
-            pVideoProcAmp = camFilter as IAMVideoProcAmp;
-
-            webcamName = INI.KeyExists("Name", webcam.DevicePath) ? INI.ReadINI(webcam.DevicePath, "Name") : webcam.Name;
-
-            main = new TableLayoutPanel
+            try
             {
-                AutoSize = true,
-                AutoSizeMode = AutoSizeMode.GrowAndShrink,
-                Dock = DockStyle.Top,
-                Location = new Point(this.Padding.Left, this.Padding.Top)
-            };
-            Controls.Add(main);
+                webcam = dev;
+                Debug.WriteLine(webcam.Name);
+                Guid iid = typeof(IBaseFilter).GUID;
+                webcam.Mon.BindToObject(null, null, ref iid, out object camDevice);
+                IBaseFilter camFilter = camDevice as IBaseFilter;
+                pCameraControl = camFilter as IAMCameraControl;
+                pVideoProcAmp = camFilter as IAMVideoProcAmp;
 
-            // Блок с ползунками
-            foreach (var prop in Enum.GetValues(typeof(CameraControlProperty)))
-                main.Controls.Add(CreatePropertyControlSave(prop));
-            foreach (var prop in Enum.GetValues(typeof(VideoProcAmpProperty)))
-                main.Controls.Add(CreatePropertyControlSave(prop));
-            foreach (PropertyControlSave pc in main.Controls)
-            {
-                if ("True".Equals(INI.ReadINI(webcam.DevicePath, pc.ToString())))
+                webcamName = INI.KeyExists("Name", webcam.DevicePath) ? INI.ReadINI(webcam.DevicePath, "Name") : webcam.Name;
+
+                main = new TableLayoutPanel
                 {
-                    pc.SetFavorite(true);
-                    CountFavorites++;
+                    AutoSize = true,
+                    AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                    Dock = DockStyle.Top,
+                    Location = new Point(this.Padding.Left, this.Padding.Top)
+                };
+                Controls.Add(main);
+
+                // Блок с ползунками
+                foreach (var prop in Enum.GetValues(typeof(CameraControlProperty)))
+                    main.Controls.Add(CreatePropertyControlSave(prop));
+                foreach (var prop in Enum.GetValues(typeof(VideoProcAmpProperty)))
+                    main.Controls.Add(CreatePropertyControlSave(prop));
+                foreach (PropertyControlSave pc in main.Controls)
+                {
+                    if ("True".Equals(INI.ReadINI(webcam.DevicePath, pc.ToString())))
+                    {
+                        pc.SetFavorite(true);
+                        CountFavorites++;
+                    }
+                    pc.ValueUpdate += new EventHandler(SetPropertyValue);
+                    pc.SyncControls += new EventHandler(SendPropertyUpdate);
+                    pc.FavoriteUpdate += new EventHandler(FavoritesUpdate);
                 }
-                pc.ValueUpdate += new EventHandler(SetPropertyValue);
-                pc.SyncControls += new EventHandler(SendPropertyUpdate);
-                pc.FavoriteUpdate += new EventHandler(FavoritesUpdate);
+
+                // Действия на кнопки (аппаратные)
+                TableLayoutPanel tlActions = new TableLayoutPanel
+                {
+                    AutoSize = true,
+                    Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
+                    AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                    Dock = DockStyle.Top,
+                    Location = new Point(this.Padding.Left, this.Padding.Top),
+                    ColumnCount = 2,
+                };
+                tlActions.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+                tlActions.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+
+                PropertyHIDButton1 = new ComboBox
+                {
+                    Name = "ButtonProp1",
+                    Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
+                    DropDownStyle = ComboBoxStyle.DropDownList
+                };
+                PropertyHIDButton2 = new ComboBox
+                {
+                    Name = "ButtonProp2",
+                    Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
+                    DropDownStyle = ComboBoxStyle.DropDownList
+                };
+                UpdatePropertyList();
+                tlActions.Controls.Add(PropertyHIDButton1);
+                tlActions.Controls.Add(PropertyHIDButton2);
+                main.Controls.Add(tlActions);
+
+                // Выбор HID устройства
+                hidDevices = new ComboBox
+                {
+                    Dock = DockStyle.Top,
+                    DropDownStyle = ComboBoxStyle.DropDownList
+                };
+                HIDList();
+                Globals._USBControl.HIDDisconnected += new EventHandler(HIDUpdateHandler);
+                Globals._USBControl.HIDConnected += new EventHandler(HIDUpdateHandler);
+                main.Controls.Add(hidDevices);
+
+                // Имя устройства
+                webcamNameEdit = new TextBox
+                {
+                    Dock = DockStyle.Top,
+                    Text = webcamName
+                };
+                main.Controls.Add(webcamNameEdit);
+
+                // Кнопка сохранения
+                Button SaveButton = new Button
+                {
+                    Dock = DockStyle.Top,
+                    Text = "Save settings"
+                };
+                SaveButton.Click += new EventHandler(SaveSetting);
+                main.Controls.Add(SaveButton);
+
+                Globals._USBControl.DShowDisconnected += new EventHandler(WebcamDisconnected);
+            }
+            catch
+            {
+                this.Controls.Add(new Label {
+                    Text = "Please, restart program to control this webcam.",
+                    Dock = DockStyle.Top,
+                    
+                });
             }
 
-            // Действия на кнопки (аппаратные)
-            TableLayoutPanel tlActions = new TableLayoutPanel
-            {
-                AutoSize = true,
-                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
-                AutoSizeMode = AutoSizeMode.GrowAndShrink,
-                Dock = DockStyle.Top,
-                Location = new Point(this.Padding.Left, this.Padding.Top),
-                ColumnCount = 2,
-            };
-            tlActions.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
-            tlActions.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
-
-            PropertyHIDButton1 = new ComboBox
-            {
-                Name = "ButtonProp1",
-                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
-                DropDownStyle = ComboBoxStyle.DropDownList
-            };
-            PropertyHIDButton2 = new ComboBox
-            {
-                Name = "ButtonProp2",
-                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
-                DropDownStyle = ComboBoxStyle.DropDownList
-            };
-            UpdatePropertyList();
-            tlActions.Controls.Add(PropertyHIDButton1);
-            tlActions.Controls.Add(PropertyHIDButton2);
-            main.Controls.Add(tlActions);
-
-            // Выбор HID устройства
-            hidDevices = new ComboBox
-            {
-                Dock = DockStyle.Top,
-                DropDownStyle = ComboBoxStyle.DropDownList
-            };
-            HIDList();
-            Globals._USBControl.HIDDisconnected += new EventHandler(HIDUpdateHandler);
-            Globals._USBControl.HIDConnected += new EventHandler(HIDUpdateHandler);
-            main.Controls.Add(hidDevices);
-
-            // Имя устройства
-            webcamNameEdit = new TextBox
-            {
-                Dock = DockStyle.Top,
-                Text = webcamName
-            };
-            main.Controls.Add(webcamNameEdit);
-
-            // Кнопка сохранения
-            Button SaveButton = new Button
-            {
-                Dock = DockStyle.Top,
-                Text = "Save settings"
-            };
-            SaveButton.Click += new EventHandler(SaveSetting);
-            main.Controls.Add(SaveButton);
-
-            Globals._USBControl.DShowDisconnected += new EventHandler(WebcamDisconnected);
         }
 
         private PropertyControlSave CreatePropertyControlSave(object property)
