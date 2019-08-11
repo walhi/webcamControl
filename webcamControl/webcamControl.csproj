@@ -120,12 +120,6 @@
       <DependentUpon>TabPageCustom.cs</DependentUpon>
     </Compile>
     <Compile Include="USBControl.cs" />
-    <Compile Include="webcam.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
-    <Compile Include="webcam.Designer.cs">
-      <DependentUpon>webcam.cs</DependentUpon>
-    </Compile>
     <EmbeddedResource Include="Form2.resx">
       <DependentUpon>Form2.cs</DependentUpon>
     </EmbeddedResource>
@@ -150,9 +144,6 @@
     </EmbeddedResource>
     <EmbeddedResource Include="SelectedProperties.resx">
       <DependentUpon>SelectedProperties.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="webcam.resx">
-      <DependentUpon>webcam.cs</DependentUpon>
     </EmbeddedResource>
     <None Include="app.config" />
     <None Include="packages.config" />
