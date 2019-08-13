@@ -50,8 +50,6 @@ namespace webcamControl
         {
             InitializeComponent();
 
-            try
-            {
                 webcam = dev;
                 Debug.WriteLine(webcam.Name);
                 Guid iid = typeof(IBaseFilter).GUID;
@@ -147,16 +145,6 @@ namespace webcamControl
                 main.Controls.Add(SaveButton);
 
                 Globals._USBControl.DShowDisconnected += new EventHandler(WebcamDisconnected);
-            }
-            catch
-            {
-                this.Controls.Add(new Label {
-                    Text = "Please, restart program to control this webcam.",
-                    Dock = DockStyle.Top,
-                    
-                });
-            }
-
         }
 
         private PropertyControlSave CreatePropertyControlSave(object property)

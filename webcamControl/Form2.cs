@@ -70,7 +70,16 @@ namespace webcamControl
         }
         private void DsDeviceConnect(object sender, EventArgs e)
         {
-            if (!(sender is DsDevice dev)) return;
+            if (!(sender is DsDevice)) return;
+            DsDevice dev = (DsDevice)sender;
+
+            Guid iid = typeof(IBaseFilter).GUID;
+            dev.Mon.BindToObject(null, null, ref iid, out object camDevice);
+            IBaseFilter camFilter = camDevice as IBaseFilter;
+            var pCameraControl = camFilter as IAMCameraControl;
+            var pVideoProcAmp = camFilter as IAMVideoProcAmp;
+
+            if (pCameraControl != null) Debug.WriteLine("DsDeviceConnect1");
             if (this.InvokeRequired)
             {
                 this.Invoke((MethodInvoker)(() =>
@@ -85,25 +94,34 @@ namespace webcamControl
             }
         }
 
-        private void DsDeviceConnectImpl(DsDevice dev)
+        private void DsDeviceConnectImpl(DsDevice devIn)
         {
-            bool flag = true;
-            foreach (object tab in tabControl.Controls)
+            // Костыль...
+            foreach (DsDevice dev in DsDevice.GetDevicesOfCat(FilterCategory.VideoInputDevice))
             {
-                if (tab is TabPageCustom tp)
+                if (dev.DevicePath.Equals(devIn.DevicePath))
                 {
-                    if (dev.DevicePath.Equals(tp.GetDsDevice().DevicePath))
+                    bool flag = true;
+                    foreach (object tab in tabControl.Controls)
                     {
-                        tp.WebcamConnected(dev);
-                        notifyIcon.ShowBalloonTip(1000, "Webcam connected", dev.Name, ToolTipIcon.Info);
-                        flag = false;
+                        if (tab is TabPageCustom tp)
+                        {
+                            if (dev.DevicePath.Equals(tp.GetDsDevice().DevicePath))
+                            {
+                                tp.WebcamConnected(dev);
+                                notifyIcon.ShowBalloonTip(1000, "Webcam connected", dev.Name, ToolTipIcon.Info);
+                                flag = false;
+                            }
+                        }
                     }
+                    if (flag)
+                    {
+                        tabControl.Controls.Add(InitTabPage(dev));
+                    }
+                    break;
                 }
             }
-            if (flag)
-            {
-                tabControl.Controls.Add(InitTabPage(dev));
-            }
+            
         }
         private void DsDeviceDisconnect(object sender, EventArgs e)
         {

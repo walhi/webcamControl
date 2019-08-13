@@ -93,7 +93,6 @@ namespace webcamControl
 
         private void UpdateUSBDevices(object sender, EventArrivedEventArgs e)
         {
-            //Thread.Sleep(1000);
             int currentCountDShow = GetCountDShow();
             int currentCountHID = GetCountHID();
 
