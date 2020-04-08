@@ -50,101 +50,188 @@ namespace webcamControl
         {
             InitializeComponent();
 
-                webcam = dev;
-                Debug.WriteLine(webcam.Name);
-                Guid iid = typeof(IBaseFilter).GUID;
-                webcam.Mon.BindToObject(null, null, ref iid, out object camDevice);
-                IBaseFilter camFilter = camDevice as IBaseFilter;
-                pCameraControl = camFilter as IAMCameraControl;
-                pVideoProcAmp = camFilter as IAMVideoProcAmp;
+            webcam = dev;
+            Debug.WriteLine(webcam.Name);
+            Guid iid = typeof(IBaseFilter).GUID;
+            webcam.Mon.BindToObject(null, null, ref iid, out object camDevice);
+            IBaseFilter camFilter = camDevice as IBaseFilter;
+            pCameraControl = camFilter as IAMCameraControl;
+            pVideoProcAmp = camFilter as IAMVideoProcAmp;
 
-                webcamName = INI.KeyExists("Name", webcam.DevicePath) ? INI.ReadINI(webcam.DevicePath, "Name") : webcam.Name;
+            webcamName = INI.KeyExists("Name", webcam.DevicePath) ? INI.ReadINI(webcam.DevicePath, "Name") : webcam.Name;
 
-                main = new TableLayoutPanel
+            main = new TableLayoutPanel
+            {
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                Dock = DockStyle.Top,
+                Location = new Point(this.Padding.Left, this.Padding.Top)
+            };
+            Controls.Add(main);
+
+            // Блок с ползунками
+            foreach (var prop in Enum.GetValues(typeof(CameraControlProperty)))
+                main.Controls.Add(CreatePropertyControlSave(prop));
+            foreach (var prop in Enum.GetValues(typeof(VideoProcAmpProperty)))
+                main.Controls.Add(CreatePropertyControlSave(prop));
+            foreach (PropertyControlSave pc in main.Controls)
+            {
+                if ("True".Equals(INI.ReadINI(webcam.DevicePath, pc.ToString())))
                 {
-                    AutoSize = true,
-                    AutoSizeMode = AutoSizeMode.GrowAndShrink,
-                    Dock = DockStyle.Top,
-                    Location = new Point(this.Padding.Left, this.Padding.Top)
-                };
-                Controls.Add(main);
-
-                // Блок с ползунками
-                foreach (var prop in Enum.GetValues(typeof(CameraControlProperty)))
-                    main.Controls.Add(CreatePropertyControlSave(prop));
-                foreach (var prop in Enum.GetValues(typeof(VideoProcAmpProperty)))
-                    main.Controls.Add(CreatePropertyControlSave(prop));
-                foreach (PropertyControlSave pc in main.Controls)
-                {
-                    if ("True".Equals(INI.ReadINI(webcam.DevicePath, pc.ToString())))
-                    {
-                        pc.SetFavorite(true);
-                        CountFavorites++;
-                    }
-                    pc.ValueUpdate += new EventHandler(SetPropertyValue);
-                    pc.SyncControls += new EventHandler(SendPropertyUpdate);
-                    pc.FavoriteUpdate += new EventHandler(FavoritesUpdate);
+                    pc.SetFavorite(true);
+                    CountFavorites++;
                 }
+                pc.ValueUpdate += new EventHandler(SetPropertyValue);
+                pc.SyncControls += new EventHandler(SendPropertyUpdate);
+                pc.FavoriteUpdate += new EventHandler(FavoritesUpdate);
+            }
 
-                // Действия на кнопки (аппаратные)
-                TableLayoutPanel tlActions = new TableLayoutPanel
-                {
-                    AutoSize = true,
-                    Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
-                    AutoSizeMode = AutoSizeMode.GrowAndShrink,
-                    Dock = DockStyle.Top,
-                    Location = new Point(this.Padding.Left, this.Padding.Top),
-                    ColumnCount = 2,
-                };
-                tlActions.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
-                tlActions.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
 
-                PropertyHIDButton1 = new ComboBox
-                {
-                    Name = "ButtonProp1",
-                    Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
-                    DropDownStyle = ComboBoxStyle.DropDownList
-                };
-                PropertyHIDButton2 = new ComboBox
-                {
-                    Name = "ButtonProp2",
-                    Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
-                    DropDownStyle = ComboBoxStyle.DropDownList
-                };
-                UpdatePropertyList();
-                tlActions.Controls.Add(PropertyHIDButton1);
-                tlActions.Controls.Add(PropertyHIDButton2);
-                main.Controls.Add(tlActions);
+            // Пресеты
+            TableLayoutPanel tlPresets = new TableLayoutPanel
+            {
+                AutoSize = true,
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                Dock = DockStyle.Top,
+                Location = new Point(this.Padding.Left, this.Padding.Top),
+                ColumnCount = 4,
+            };
+            tlPresets.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25F));
+            tlPresets.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25F));
+            tlPresets.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25F));
+            tlPresets.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25F));
+            Button loadP1Button = new Button
+            {
+                Dock = DockStyle.Top,
+                Tag = "Preset_1",
+                Enabled = INI.KeyExists("Preset_1", webcam.DevicePath),
+                Text = "Load 1"     
+            };
+            Button loadP2Button = new Button
+            {
+                Dock = DockStyle.Top,
+                Tag = "Preset_2",
+                Enabled = INI.KeyExists("Preset_2", webcam.DevicePath),
+                Text = "Load 2"
+            };
+            Button loadP3Button = new Button
+            {
+                Dock = DockStyle.Top,
+                Tag = "Preset_3",
+                Enabled = INI.KeyExists("Preset_3", webcam.DevicePath),
+                Text = "Load 3"
+            };
+            Button loadAutostartButton = new Button
+            {
+                Dock = DockStyle.Top,
+                Tag = "Autostart",
+                Enabled = INI.KeyExists("Autostart", webcam.DevicePath),
+                Text = "Load"
+            };
+            Button saveP1Button = new Button
+            {
+                Dock = DockStyle.Top,
+                Tag = loadP1Button,
+                Text = "Save 1"
+            };
+            Button saveP2Button = new Button
+            {
+                Dock = DockStyle.Top,
+                Tag = loadP2Button,
+                Text = "Save 2"
+            };
+            Button saveP3Button = new Button
+            {
+                Dock = DockStyle.Top,
+                Tag = loadP3Button,
+                Text = "Save 3"
+            };
+            Button saveAutostartButton = new Button
+            {
+                Dock = DockStyle.Top,
+                Tag = loadAutostartButton,
+                Text = "Autostart"
+            };
+            saveP1Button.Click += new EventHandler(SavePresetSetting);
+            saveP2Button.Click += new EventHandler(SavePresetSetting);
+            saveP3Button.Click += new EventHandler(SavePresetSetting);
+            saveAutostartButton.Click += new EventHandler(SavePresetSetting);
+            loadP1Button.Click += new EventHandler(LoadPresetSetting);
+            loadP2Button.Click += new EventHandler(LoadPresetSetting);
+            loadP3Button.Click += new EventHandler(LoadPresetSetting);
+            loadAutostartButton.Click += new EventHandler(LoadPresetSetting);
+            if (INI.KeyExists("Autostart_enable", webcam.DevicePath)) loadAutostartButton.PerformClick();
+            tlPresets.Controls.Add(saveP1Button);
+            tlPresets.Controls.Add(saveP2Button);
+            tlPresets.Controls.Add(saveP3Button);
+            tlPresets.Controls.Add(saveAutostartButton);
+            tlPresets.Controls.Add(loadP1Button);
+            tlPresets.Controls.Add(loadP2Button);
+            tlPresets.Controls.Add(loadP3Button);
+            tlPresets.Controls.Add(loadAutostartButton);
+            main.Controls.Add(tlPresets);
 
-                // Выбор HID устройства
-                hidDevices = new ComboBox
-                {
-                    Dock = DockStyle.Top,
-                    DropDownStyle = ComboBoxStyle.DropDownList
-                };
-                HIDList();
-                Globals._USBControl.HIDDisconnected += new EventHandler(HIDUpdateHandler);
-                Globals._USBControl.HIDConnected += new EventHandler(HIDUpdateHandler);
-                main.Controls.Add(hidDevices);
+            // Действия на кнопки (аппаратные)
+            TableLayoutPanel tlActions = new TableLayoutPanel
+            {
+                AutoSize = true,
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                Dock = DockStyle.Top,
+                Location = new Point(this.Padding.Left, this.Padding.Top),
+                ColumnCount = 2,
+            };
+            tlActions.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+            tlActions.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
 
-                // Имя устройства
-                webcamNameEdit = new TextBox
-                {
-                    Dock = DockStyle.Top,
-                    Text = webcamName
-                };
-                main.Controls.Add(webcamNameEdit);
+            PropertyHIDButton1 = new ComboBox
+            {
+                Name = "ButtonProp1",
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
+                DropDownStyle = ComboBoxStyle.DropDownList
+            };
+            PropertyHIDButton2 = new ComboBox
+            {
+                Name = "ButtonProp2",
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
+                DropDownStyle = ComboBoxStyle.DropDownList
+            };
+            UpdatePropertyList();
+            tlActions.Controls.Add(PropertyHIDButton1);
+            tlActions.Controls.Add(PropertyHIDButton2);
+            main.Controls.Add(tlActions);
 
-                // Кнопка сохранения
-                Button SaveButton = new Button
-                {
-                    Dock = DockStyle.Top,
-                    Text = "Save settings"
-                };
-                SaveButton.Click += new EventHandler(SaveSetting);
-                main.Controls.Add(SaveButton);
+            // Выбор HID устройства
+            hidDevices = new ComboBox
+            {
+                Dock = DockStyle.Top,
+                DropDownStyle = ComboBoxStyle.DropDownList
+            };
+            HIDList();
+            Globals._USBControl.HIDDisconnected += new EventHandler(HIDUpdateHandler);
+            Globals._USBControl.HIDConnected += new EventHandler(HIDUpdateHandler);
+            main.Controls.Add(hidDevices);
 
-                Globals._USBControl.DShowDisconnected += new EventHandler(WebcamDisconnected);
+            // Имя устройства
+            webcamNameEdit = new TextBox
+            {
+                Dock = DockStyle.Top,
+                Text = webcamName
+            };
+            main.Controls.Add(webcamNameEdit);
+
+
+            // Кнопка сохранения
+            Button SaveButton = new Button
+            {
+                Dock = DockStyle.Top,
+                Text = "Save settings"
+            };
+            SaveButton.Click += new EventHandler(SaveSetting);
+            main.Controls.Add(SaveButton);
+
+            Globals._USBControl.DShowDisconnected += new EventHandler(WebcamDisconnected);
         }
 
         private PropertyControlSave CreatePropertyControlSave(object property)
@@ -174,7 +261,8 @@ namespace webcamControl
                 pVideoProcAmp.Get((VideoProcAmpProperty)property, out pValue, out cameraFlags);
                 auto = (cameraFlags & VideoProcAmpFlags.Auto) == VideoProcAmpFlags.Auto;
                 manual = (cameraFlags & VideoProcAmpFlags.Manual) == VideoProcAmpFlags.Manual;
-            } else
+            }
+            else
             {
                 none = true;
                 autoSupport = manualSupport = auto = manual = false;
@@ -218,7 +306,6 @@ namespace webcamControl
             int value = pc.GetValue();
             bool auto = pc.GetAutoMode();
 
-            Debug.WriteLine("PropertyValueUpdate");
             if (Object.ReferenceEquals(pc.GetProperty().GetType(), new CameraControlProperty().GetType()))
             {
                 pCameraControl.Set((CameraControlProperty)pc.GetProperty(), value, auto ? CameraControlFlags.Auto : CameraControlFlags.Manual);
@@ -390,7 +477,7 @@ namespace webcamControl
 
             INI.Write(webcam.DevicePath, "Name", webcamNameEdit.Text);
             ((TabPage)Parent).Text = webcamName = webcamNameEdit.Text;
-            
+
 
 
             ConfigurationUpdate?.Invoke(this, new EventArgs());
@@ -400,6 +487,40 @@ namespace webcamControl
                 DeleteSelectedProperties?.Invoke(this, new EventArgs());
 
             CountFavorites = count;
+        }
+
+        private void SavePresetSetting(object sender, EventArgs e)
+        {
+            Button load = (Button)((Button)sender).Tag;
+            String tag = load.Tag.ToString();
+            INI.Write(webcam.DevicePath, tag, true.ToString());
+            foreach (Control item in main.Controls)
+            {
+                if (item is PropertyControlSave)
+                {
+                    INI.Write(webcam.DevicePath, tag + "_auto_" + ((PropertyControlSave)item).ToString(), ((PropertyControlSave)item).GetAutoMode().ToString());
+                    INI.Write(webcam.DevicePath, tag + "_value_" + ((PropertyControlSave)item).ToString(), ((PropertyControlSave)item).GetValue().ToString());
+                }
+            }
+            load.Enabled = true;
+        }
+        public void LoadPresetSetting(object sender, EventArgs e)
+        {
+            String tag = "";
+            if (sender is Button)
+            {
+                tag = ((Button)sender).Tag.ToString();
+            } else if (sender is String){
+                tag = (String)sender;
+            }
+            foreach (Control item in main.Controls)
+            {
+                if (item is PropertyControlSave)
+                {
+                    ((PropertyControlSave)item).SetAutoMode(Boolean.Parse(INI.ReadINI(webcam.DevicePath, tag + "_auto_" + ((PropertyControlSave)item).ToString())));
+                    ((PropertyControlSave)item).SetValue(Int32.Parse(INI.ReadINI(webcam.DevicePath, tag + "_value_" + ((PropertyControlSave)item).ToString())));
+                }
+            }
         }
 
         public DsDevice GetDevice()

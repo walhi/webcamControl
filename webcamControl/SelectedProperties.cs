@@ -76,6 +76,63 @@ namespace webcamControl
                 Location = new Point(gBox.Padding.Left, gBox.Padding.Top + 20),
                 Dock = DockStyle.Top,
             };
+
+            // Пресеты
+            TableLayoutPanel tlPresets = new TableLayoutPanel
+            {
+                AutoSize = true,
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                Dock = DockStyle.Top,
+                Location = new Point(this.Padding.Left, this.Padding.Top),
+                ColumnCount = 4,
+            };
+            tlPresets.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25F));
+            tlPresets.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25F));
+            tlPresets.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25F));
+            tlPresets.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25F));
+            Button loadP1Button = new Button
+            {
+                Dock = DockStyle.Top,
+                Tag = "Preset_1",
+                Enabled = INI.KeyExists("Preset_1", webcam.DevicePath),
+                Text = "Preset 1"
+            };
+            Button loadP2Button = new Button
+            {
+                Dock = DockStyle.Top,
+                Tag = "Preset_2",
+                Enabled = INI.KeyExists("Preset_2", webcam.DevicePath),
+                Text = "Preset 2"
+            };
+            Button loadP3Button = new Button
+            {
+                Dock = DockStyle.Top,
+                Tag = "Preset_3",
+                Enabled = INI.KeyExists("Preset_3", webcam.DevicePath),
+                Text = "Preset 3"
+            };
+            Button loadAutostartButton = new Button
+            {
+                Dock = DockStyle.Top,
+                Tag = "Autostart",
+                Enabled = INI.KeyExists("Autostart", webcam.DevicePath),
+                Text = "Autostart"
+            };
+            loadP1Button.Click += new EventHandler(LoadPresetSetting);
+            loadP2Button.Click += new EventHandler(LoadPresetSetting);
+            loadP3Button.Click += new EventHandler(LoadPresetSetting);
+            loadAutostartButton.Click += new EventHandler(LoadPresetSetting);
+            tlPresets.Controls.Add(loadP1Button);
+            tlPresets.Controls.Add(loadP2Button);
+            tlPresets.Controls.Add(loadP3Button);
+            tlPresets.Controls.Add(loadAutostartButton);
+            gBox.Controls.Add(tlPresets);
+
+
+
+
+
             gBox.Controls.Add(mainLayout);
             Controls.Add(gBox);
 
@@ -249,6 +306,12 @@ namespace webcamControl
             if (currentProperty != null) currentProperty.SelectItem(false);
             currentProperty = (PropertyControl)mainLayout.Controls[currentIndex];
             currentProperty.SelectItem(true);
+        }
+        
+        private void LoadPresetSetting(object sender, EventArgs e)
+        {
+            String tag = ((Button)sender).Tag.ToString();
+            AllPropertiesVar.LoadPresetSetting(tag, new EventArgs());
         }
 
         private void HIDTimedEvent(Object source, System.Timers.ElapsedEventArgs e)

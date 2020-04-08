@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using DirectShowLib;
+using System.Diagnostics;
 
 namespace webcamControl
 {
@@ -89,16 +90,24 @@ namespace webcamControl
             return trackBar.Value;
         }
 
-        private void SetValue(int newValue, bool auto)
+        public void SetAutoMode(bool auto)
         {
+            cbAuto.Checked = auto;
+            ValueUpdate?.Invoke(this, new EventArgs());
+            SyncControls?.Invoke(this, new EventArgs());
+        }
+        public void SetValue(int newValue)
+        {
+            Debug.Print("SetValue");
+            trackBar.Value = newValue;
+            ValueUpdate?.Invoke(this, new EventArgs());
+            SyncControls?.Invoke(this, new EventArgs());
         }
 
         private void trackBar_Scroll(object sender, EventArgs e)
         {
             int Value = trackBar.Value - trackBar.Value % trackBar.TickFrequency;
-            SetValue(trackBar.Value, false);
-            ValueUpdate?.Invoke(this, new EventArgs());
-            SyncControls?.Invoke(this, new EventArgs());
+            SetValue(trackBar.Value);
         }
 
         private void cbAuto_CheckedChanged(object sender, EventArgs e)
@@ -107,24 +116,20 @@ namespace webcamControl
             if (cbAuto.Checked)
             {
                 // todo
-                SetValue(trackBar.Minimum, false);
-                SetValue(trackBar.Minimum, true);
+                SetValue(trackBar.Minimum);
+                SetValue(trackBar.Minimum);
             }
             else
             {
-                SetValue(trackBar.Value, false);
+                SetValue(trackBar.Value);
             }
-            ValueUpdate?.Invoke(this, new EventArgs());
-            SyncControls?.Invoke(this, new EventArgs());
         }
 
         private void resetDefault(object sender, EventArgs e)
         {
             if (((MouseEventArgs)e).Button == MouseButtons.Left) return;
             trackBar.Value = defaultValue;
-            SetValue(trackBar.Value, false);
-            ValueUpdate?.Invoke(this, new EventArgs());
-            SyncControls?.Invoke(this, new EventArgs());
+            SetValue(trackBar.Value);
         }
 
         private void cbFavorite_CheckedChanged(object sender, EventArgs e)

@@ -49,7 +49,7 @@
             this.AllPage.Location = new System.Drawing.Point(4, 22);
             this.AllPage.Name = "AllPage";
             this.AllPage.Padding = new System.Windows.Forms.Padding(3);
-            this.AllPage.Size = new System.Drawing.Size(335, 546);
+            this.AllPage.Size = new System.Drawing.Size(335, 603);
             this.AllPage.TabIndex = 1;
             this.AllPage.Text = "All";
             // 
@@ -60,7 +60,7 @@
             this.tabControl.Location = new System.Drawing.Point(0, 0);
             this.tabControl.Name = "tabControl";
             this.tabControl.SelectedIndex = 0;
-            this.tabControl.Size = new System.Drawing.Size(343, 572);
+            this.tabControl.Size = new System.Drawing.Size(343, 629);
             this.tabControl.TabIndex = 0;
             // 
             // notifyIcon
@@ -79,38 +79,38 @@
             this.toolStripSeparator1,
             this.Exit});
             this.trayMenu.Name = "contextMenuStrip1";
-            this.trayMenu.Size = new System.Drawing.Size(181, 98);
+            this.trayMenu.Size = new System.Drawing.Size(104, 76);
             this.trayMenu.ItemClicked += new System.Windows.Forms.ToolStripItemClickedEventHandler(this.trayMenu_ItemClicked);
             // 
             // Show
             // 
             this.Show.Enabled = false;
             this.Show.Name = "Show";
-            this.Show.Size = new System.Drawing.Size(180, 22);
+            this.Show.Size = new System.Drawing.Size(103, 22);
             this.Show.Text = "Show";
             // 
             // Hide
             // 
             this.Hide.Name = "Hide";
-            this.Hide.Size = new System.Drawing.Size(180, 22);
+            this.Hide.Size = new System.Drawing.Size(103, 22);
             this.Hide.Text = "Hide";
             // 
             // toolStripSeparator1
             // 
             this.toolStripSeparator1.Name = "toolStripSeparator1";
-            this.toolStripSeparator1.Size = new System.Drawing.Size(177, 6);
+            this.toolStripSeparator1.Size = new System.Drawing.Size(100, 6);
             // 
             // Exit
             // 
             this.Exit.Name = "Exit";
-            this.Exit.Size = new System.Drawing.Size(180, 22);
+            this.Exit.Size = new System.Drawing.Size(103, 22);
             this.Exit.Text = "Exit";
             // 
             // Form2
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(343, 569);
+            this.ClientSize = new System.Drawing.Size(343, 630);
             this.Controls.Add(this.tabControl);
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.Name = "Form2";
